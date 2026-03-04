@@ -1,4 +1,5 @@
-import { useEffect, useState, RefObject } from 'react';
+import { useEffect, useState } from 'react';
+import type { RefObject } from 'react';
 
 /**
  * Hook personalizado para observar la intersección de un elemento con el viewport

@@ -16,6 +16,11 @@ export default {
         },
         darkText: 'hsl(var(--text-dark))',
         lightText: 'hsl(var(--text-light))',
+        lightBg: {
+          1: 'var(--light-bg-1)',
+          2: 'var(--light-bg-2)',
+          3: 'var(--light-bg-3)',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

@@ -47,7 +47,7 @@ export const Header = () => {
       }}
       className={cn(
         'fixed top-0 left-0 right-0 z-50',
-        'backdrop-blur-md bg-white/80 border-b border-secondary/10',
+        'backdrop-blur-sm bg-white/50 border-b border-secondary/10',
         'pointer-events-none',
         isHeaderVisible && 'pointer-events-auto'
       )}
