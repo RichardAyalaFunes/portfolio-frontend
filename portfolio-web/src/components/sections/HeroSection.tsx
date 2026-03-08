@@ -107,17 +107,17 @@ export const HeroSection = ({
         {/* Floating Background Elements (SVGs) */}
         {/* 1. AI Typography & Stars (Top right outside card) */}
         <div className="absolute -top-48 -right-56 z-0 flex flex-col items-center opacity-60 pointer-events-none">
-          <img src="/ai-with-starts.svg" alt="AI Stars" className="w-72 h-72" />
+          <img src="/logos/ai-with-starts.svg" alt="AI Stars" className="w-72 h-72" />
         </div>
 
         {/* 2. React Logo (Middle right outside card) */}
         <div className="absolute top-1/2 -right-8 -translate-y-1/2 z-0 opacity-40 pointer-events-none">
-          <img src="/react-svgrepo-com.svg" alt="React" className="w-24 h-24 animate-[spin_24s_linear_infinite]" />
+          <img src="/logos/react-svgrepo-com.svg" alt="React" className="w-24 h-24 animate-[spin_24s_linear_infinite]" />
         </div>
 
         {/* 3. Python Logo (Bottom right outside card) */}
         <div className="absolute -bottom-48 -right-12 z-0 opacity-40 pointer-events-none">
-          <img src="/python-svgrepo-com.svg" alt="Python" className="w-72 h-72 drop-shadow-2xl" />
+          <img src="/logos/python-svgrepo-com.svg" alt="Python" className="w-72 h-72 drop-shadow-2xl" />
         </div>
 
         {/* Central Glassmorphic Card */}
@@ -160,13 +160,17 @@ export const HeroSection = ({
             {/* Card Navigation Menu */}
             <nav className="col-start-2 row-start-2 mt-14 w-full">
               <ul className="flex items-center justify-start gap-6 text-[#fefae0]/80 text-xl font-medium">
-                {['Projects', 'Experience', 'About Me', 'Skills'].map((item, index, arr) => (
-                  <li key={item} className="flex items-center gap-6 group cursor-pointer">
-                    <a href={`#${item.toLowerCase().replace(' ', '-')}`} className="relative flex items-center transition-colors group-hover:text-[#ffc300]">
+                {[
+                  { label: 'Projects', href: '#projects' },
+                  { label: 'Skills', href: '#skills' },
+                  { label: 'Contact Me', href: '#contact' },
+                ].map((item, index, arr) => (
+                  <li key={item.label} className="flex items-center gap-6 group cursor-pointer">
+                    <a href={item.href} className="relative flex items-center transition-colors group-hover:text-[#ffc300]">
                       <span className="absolute -left-5 opacity-0 group-hover:opacity-100 transition-opacity text-[#ffc300] font-bold">
                         &gt;
                       </span>
-                      {item}
+                      {item.label}
                     </a>
                     {index < arr.length - 1 && (
                       <span className="text-white/20 font-light">|</span>

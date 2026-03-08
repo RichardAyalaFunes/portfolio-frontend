@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 
 /**
@@ -8,31 +9,46 @@ import { cn } from '../../lib/utils';
  */
 export const Header = () => {
   const [isHeaderVisible, setIsHeaderVisible] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
-    const heroElement = document.getElementById('hero');
-    if (!heroElement) {
-      // Si no hay hero, mostrar el header por defecto (error handling)
-      setIsHeaderVisible(true);
-      return;
-    }
+    let observer: IntersectionObserver | null = null;
+    let timeoutId: ReturnType<typeof setTimeout>;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        // El header es visible cuando el hero NO está visible
-        setIsHeaderVisible(!entry.isIntersecting);
-      },
-      {
-        threshold: 0.1,
+    const observeHero = () => {
+      const heroElement = document.getElementById('hero');
+
+      if (!heroElement) {
+        // If we are on the home page but hero is not yet rendered, retry
+        if (location.pathname === '/') {
+          timeoutId = setTimeout(observeHero, 100);
+        } else {
+          // If we are not on the home page (e.g. /chat), always show header
+          setIsHeaderVisible(true);
+        }
+        return;
       }
-    );
 
-    observer.observe(heroElement);
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          // El header es visible cuando el hero NO está visible
+          setIsHeaderVisible(!entry.isIntersecting);
+        },
+        {
+          threshold: 0.1,
+        }
+      );
+
+      observer.observe(heroElement);
+    };
+
+    observeHero();
 
     return () => {
-      observer.disconnect();
+      if (timeoutId) clearTimeout(timeoutId);
+      if (observer) observer.disconnect();
     };
-  }, []);
+  }, [location.pathname]);
 
   return (
     <motion.header
@@ -47,7 +63,7 @@ export const Header = () => {
       }}
       className={cn(
         'fixed top-0 left-0 right-0 z-50',
-        'backdrop-blur-sm bg-white/50 border-b border-secondary/10',
+        'backdrop-blur-md bg-white/50 border-b border-secondary/10',
         'pointer-events-none',
         isHeaderVisible && 'pointer-events-auto'
       )}
@@ -56,9 +72,14 @@ export const Header = () => {
       }}
     >
       <nav className="container mx-auto flex max-w-6xl items-center justify-between px-4 py-4 md:px-8">
-        <div className="text-lg font-semibold text-primary">Portfolio</div>
-        
+        <Link to="/" className="text-lg font-semibold text-primary">Richard A.</Link>
+
         <ul className="flex items-center gap-6">
+          <li>
+            <Link to="/chat" className="text-sm font-medium text-accent-cyan transition-colors hover:text-accent-gold">
+              Chat with AI
+            </Link>
+          </li>
           <li>
             <a
               href="#projects"
@@ -71,7 +92,7 @@ export const Header = () => {
               Projects
             </a>
           </li>
-          <li>
+          {/* <li>
             <a
               href="#experience"
               className="text-sm font-medium text-darkText transition-colors hover:text-accent-gold"
@@ -82,7 +103,7 @@ export const Header = () => {
             >
               Experience
             </a>
-          </li>
+          </li> */}
           <li>
             <a
               href="#contact"

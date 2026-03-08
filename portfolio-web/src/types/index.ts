@@ -15,6 +15,7 @@ export interface Project {
   detailDescription: string;
   tags: string[]; // Shown on left column
   techStack?: { name: string; icon: string }[]; // Optional explicit icons for the right column
+  cardGradient?: string; // Custom background gradient for accordion 
   demoUrl?: string;
   githubUrl?: string;
   gallery?: string[];

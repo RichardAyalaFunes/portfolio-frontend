@@ -9,7 +9,7 @@ This portfolio application serves as a digital showcase for professional work, f
 ## ✨ Features
 
 - **Hero Section**: Full-viewport introduction with dynamic header that appears on scroll
-- **Project Gallery**: Categorized project showcase (AI, Backend, Frontend) with responsive grid layout
+- **Project Gallery**: Searchable, expandable accordion project list with detailed breakdown and media gallery directly inline
 - **Experience Timeline**: Reverse-chronological display of professional history and achievements
 - **Skills Visualization**: Interactive spider chart displaying competency levels across technical domains
 - **Contact Footer**: Professional contact information with social media links
