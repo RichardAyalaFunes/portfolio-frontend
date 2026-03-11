@@ -1,50 +1,43 @@
+import { useState, useMemo } from 'react';
+import { Search } from 'lucide-react';
 import { projects } from '../../data/projects';
-import type { ProjectCategory } from '../../types';
+import type { Project } from '../../types';
 import { ProjectCard } from '../ui/ProjectCard';
 import { cn } from '../../lib/utils';
 
-/**
- * Mapeo de categorías a títulos de sección
- */
-const categoryTitles: Record<ProjectCategory, string> = {
-  'AI Project': 'AI Projects',
-  'Backend Project': 'Backend Projects',
-  'Front-end Project': 'Frontend Projects',
-};
 
-/**
- * Componente ProjectsSection
- * Muestra proyectos agrupados por categoría en un grid responsivo
- */
 export const ProjectsSection = () => {
-  // Filtrar proyectos por categoría
-  const aiProjects = projects.filter((p) => p.category === 'AI Project');
-  const backendProjects = projects.filter((p) => p.category === 'Backend Project');
-  const frontendProjects = projects.filter((p) => p.category === 'Front-end Project');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-  /**
-   * Renderiza una sección de proyectos por categoría
-   */
-  const renderCategorySection = (
-    categoryProjects: typeof projects,
-    category: ProjectCategory
-  ) => {
+  // Filter projects by search term
+  const filteredProjects = useMemo(() => {
+    if (!searchTerm) return projects;
+    const lowerTerm = searchTerm.toLowerCase();
+    return projects.filter(p =>
+      p.title.toLowerCase().includes(lowerTerm) ||
+      p.shortDescription.toLowerCase().includes(lowerTerm) ||
+      p.tags.some(t => t.toLowerCase().includes(lowerTerm))
+    );
+  }, [searchTerm]);
+
+  const aiProjects = filteredProjects.filter((p) => p.category === 'AI Project');
+  const backendProjects = filteredProjects.filter((p) => p.category === 'Backend Project');
+  const frontendProjects = filteredProjects.filter((p) => p.category === 'Front-end Project');
+
+  const renderCategoryList = (categoryProjects: typeof projects) => {
     if (categoryProjects.length === 0) return null;
 
     return (
-      <div className="mb-16 last:mb-0">
-        <h2 className="mb-8 text-center text-3xl font-bold text-darkText md:text-4xl">
-          {categoryTitles[category]}
-        </h2>
-        <div
-          className={cn(
-            'grid grid-cols-1 gap-6',
-            'md:grid-cols-2',
-            'lg:grid-cols-3'
-          )}
-        >
+      <div className="mb-10 last:mb-0">
+        <div className="flex flex-col gap-8">
           {categoryProjects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard
+              key={project.id}
+              project={project}
+              isSelected={selectedProject?.id === project.id}
+              onSelect={() => setSelectedProject(selectedProject?.id === project.id ? null : project)}
+            />
           ))}
         </div>
       </div>
@@ -52,21 +45,48 @@ export const ProjectsSection = () => {
   };
 
   return (
-    <section
-      id="projects"
-      className={cn(
-        'container mx-auto max-w-6xl px-4 py-16',
-        'md:px-8 md:py-24'
-      )}
-    >
-      <h1 className="mb-12 text-center text-4xl font-bold text-darkText md:text-5xl">
-        Projects
-      </h1>
+    <section id="projects" className="min-h-screen bg-lightBg-3 py-16 md:py-24">
+      <div className="container mx-auto px-4 md:px-8 max-w-5xl">
 
-      {renderCategorySection(aiProjects, 'AI Project')}
-      {renderCategorySection(backendProjects, 'Backend Project')}
-      {renderCategorySection(frontendProjects, 'Front-end Project')}
+        <h2 className="sr-only">Projects</h2>
+
+        <div className="w-full flex justify-center">
+
+          {/* Single Column: Accordion List */}
+          <div className="flex flex-col space-y-8 w-full">
+            {/* Search Input */}
+            <div className="relative w-full max-w-xl mx-auto mb-4">
+              <div className={cn("absolute inset-y-0 flex items-center pointer-events-none transition-all duration-300 left-4")}>
+                <Search className={cn("transition-all duration-300", searchTerm ? "h-5 w-5 text-gray-700" : "h-4 w-4 text-gray-500")} />
+              </div>
+              <input
+                type="text"
+                placeholder="Search projects..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={cn(
+                  "w-full rounded-full border border-gray-300 bg-white/50 pr-6 py-3 placeholder-muted-gray focus:border-accent-gold focus:outline-none focus:ring-1 focus:ring-accent-gold transition-all shadow-sm",
+                  searchTerm ? "pl-11 text-darkText" : "pl-10 text-gray-500"
+                )}
+              />
+            </div>
+
+            {/* Project Lists */}
+            <div className="w-full">
+              {renderCategoryList(aiProjects)}
+              {renderCategoryList(backendProjects)}
+              {renderCategoryList(frontendProjects)}
+
+              {filteredProjects.length === 0 && (
+                <div className="text-center py-12 text-muted-gray">
+                  No projects found for "{searchTerm}"
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+      </div>
     </section>
   );
 };
-

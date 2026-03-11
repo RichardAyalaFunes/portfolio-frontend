@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="100%" height="100%">
+  <defs>
+    <linearGradient id="sparkleGradient" x1="0%" y1="0%" x2="90%" y2="0%">
+      <stop offset="0%" stop-color="#c724b162" /> <!-- Pink/Magenta -->
+      <stop offset="30%" stop-color="#8d2de2b9" /> <!-- Purple -->
+      <stop offset="100%" stop-color="#00c8ff9b" /> <!-- Light Blue/Cyan -->
+    </linearGradient>
+    
+    <linearGradient id="sparkleGradient-2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c724b173" /> <!-- Pink/Magenta -->
+      <stop offset="30%" stop-color="#8d2de27d" /> <!-- Purple -->
+      <stop offset="100%" stop-color="#00c8ffc3" /> <!-- Light Blue/Cyan -->
+    </linearGradient>
+  </defs>
+
+  <!-- Big Star -->
+  <path d="M 150 0 
+           Q 150 100 230 100 
+           Q 150 100 150 200 
+           Q 150 100 70 100 
+           Q 150 100 150 0 Z" 
+        fill="url(#sparkleGradient)" />
+
+  <!-- Medium Star -->
+  <path d="M 75 140 
+           Q 75 180 115 180 
+           Q 75 180 75 220 
+           Q 75 180 35 180 
+           Q 75 180 75 140 Z" 
+        fill="url(#sparkleGradient-2)" />
+
+  <!-- Small Star -->
+  <path d="M 35 110 
+           Q 35 125 50 125 
+           Q 35 125 35 140 
+           Q 35 125 20 125 
+           Q 35 125 35 110 Z" 
+        fill="url(#sparkleGradient-2)" />
+</svg>

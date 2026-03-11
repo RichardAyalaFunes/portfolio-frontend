@@ -1,4 +1,4 @@
-import { Skill } from '../types';
+import type { Skill } from '../types';
 
 /**
  * Datos de habilidades y competencias
@@ -18,7 +18,7 @@ export const skills: Skill[] = [
   {
     id: 'frontend',
     domain: 'Frontend',
-    level: 'Basic',
+    level: 'Intermediate',
   },
   {
     id: 'data-analysis',
@@ -29,6 +29,11 @@ export const skills: Skill[] = [
     id: 'devops',
     domain: 'DevOps',
     level: 'Basic',
+  },
+  {
+    id: 'cloud',
+    domain: 'Cloud',
+    level: 'Intermediate',
   },
 ];
 

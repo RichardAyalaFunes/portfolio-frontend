@@ -1,5 +1,6 @@
 import { Linkedin, Github } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { LINKEDIN_URL } from '../../config/constants';
 
 /**
  * Componente Footer con información de contacto
@@ -25,7 +26,7 @@ export const Footer = () => {
           {/* Social Links */}
           <div className="flex items-center gap-6">
             <a
-              href="https://www.linkedin.com/in/richard-xavier-ayala-funes/"
+              href={LINKEDIN_URL}
               target="_blank"
               rel="noopener noreferrer"
               className={cn(

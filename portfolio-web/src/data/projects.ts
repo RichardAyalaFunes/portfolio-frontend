@@ -1,70 +1,73 @@
-import { Project } from '../types';
+import type { Project } from '../types';
 
 /**
- * Datos de proyectos del portfolio (placeholder)
- * Organizados por categoría: AI, Backend, Frontend
+ * Project data (Local storage for Master-Detail UI)
  */
 export const projects: Project[] = [
-  // AI Projects
   {
     id: 'ai-1',
     category: 'AI Project',
-    title: 'Machine Learning Model',
-    image: 'https://via.placeholder.com/400x300/001d3d/fefae0?text=AI+Project+1',
-    techStack: ['Python', 'TensorFlow', 'Scikit-learn', 'Pandas'],
-    description: 'Sistema de aprendizaje automático para análisis predictivo',
+    title: 'Real Time Avatars',
+    image: '/projects/real-time-portrait.png',
+    shortDescription: 'AI Agent with real time video avatar generated and a second on, with just real time conversational voice agent.',
+    detailDescription: 'A cutting-edge AI agent integration featuring a real-time video avatar generated dynamically, accompanied by a fully conversational voice agent. It provides low-latency, emotionally responsive interactions suitable for customer service and interactive digital human experiences.',
+    tags: ['WebRTC', 'React', 'FastApi', 'liveavatar.com'],
+    techStack: [
+      { name: 'WebRTC', icon: 'webrtc' },
+      { name: 'React', icon: 'react' },
+      { name: 'FastApi', icon: 'fastapi' }
+    ],
+    cardGradient: 'linear-gradient(135deg, rgb(253, 251, 251) 0%, rgb(231 226 222) 100%)',
+    demoUrl: '/real-time',
+    githubUrl: '',
+    gallery: [
+      'https://via.placeholder.com/800x450/001d3d/fefae0?text=Avatar+Interaction',
+      'https://via.placeholder.com/800x450/001d3d/fefae0?text=Voice+Agent',
+    ]
   },
   {
     id: 'ai-2',
     category: 'AI Project',
-    title: 'NLP Text Analyzer',
-    image: 'https://via.placeholder.com/400x300/001d3d/fefae0?text=AI+Project+2',
-    techStack: ['Python', 'NLTK', 'spaCy', 'Transformers'],
-    description: 'Analizador de texto con procesamiento de lenguaje natural',
+    title: 'Multimodal conversational agent',
+    image: '/projects/chat-portrait.png',
+    shortDescription: 'Similar to ChatGPT where you upload, create files and execute actions/workflows.',
+    detailDescription: 'A comprehensive multimodal conversational agent modeled after advanced assistants like ChatGPT. Users can upload documents, dynamically generate files, and trigger complex automated workflows and actions driven by user prompts.',
+    tags: ['React', 'n8n', 'Gemini', 'OpenAI'],
+    techStack: [
+      { name: 'React', icon: 'react' },
+      { name: 'n8n', icon: 'n8n' },
+      { name: 'Gemini', icon: 'gemini' },
+      { name: 'OpenAI', icon: 'openai' }
+    ],
+    cardGradient: 'linear-gradient(133deg, rgb(249 255 236) 0%, rgb(230 234 251) 100%)',
+    demoUrl: '/chat',
+    githubUrl: '',
+    gallery: [
+      'https://via.placeholder.com/800x450/003566/fefae0?text=Chat+Interface',
+      'https://via.placeholder.com/800x450/003566/fefae0?text=Workflow+Builder',
+    ]
   },
-  
-  // Backend Projects
-  {
-    id: 'backend-1',
-    category: 'Backend Project',
-    title: 'REST API Service',
-    image: 'https://via.placeholder.com/400x300/003566/fefae0?text=Backend+1',
-    techStack: ['Node.js', 'Express', 'PostgreSQL', 'Redis'],
-    description: 'API RESTful escalable con autenticación y caché',
-  },
-  {
-    id: 'backend-2',
-    category: 'Backend Project',
-    title: 'Microservices Architecture',
-    image: 'https://via.placeholder.com/400x300/003566/fefae0?text=Backend+2',
-    techStack: ['Docker', 'Kubernetes', 'gRPC', 'MongoDB'],
-    description: 'Arquitectura de microservicios con orquestación',
-  },
-  {
-    id: 'backend-3',
-    category: 'Backend Project',
-    title: 'GraphQL Gateway',
-    image: 'https://via.placeholder.com/400x300/003566/fefae0?text=Backend+3',
-    techStack: ['GraphQL', 'Apollo Server', 'TypeScript', 'Prisma'],
-    description: 'Gateway GraphQL con resolución de esquemas federados',
-  },
-  
-  // Frontend Projects
   {
     id: 'frontend-1',
     category: 'Front-end Project',
-    title: 'React Dashboard',
-    image: 'https://via.placeholder.com/400x300/ffc300/000814?text=Frontend+1',
-    techStack: ['React', 'TypeScript', 'Tailwind CSS', 'Recharts'],
-    description: 'Dashboard interactivo con visualización de datos',
-  },
-  {
-    id: 'frontend-2',
-    category: 'Front-end Project',
-    title: 'E-commerce Platform',
-    image: 'https://via.placeholder.com/400x300/ffc300/000814?text=Frontend+2',
-    techStack: ['Next.js', 'React', 'Stripe', 'Tailwind CSS'],
-    description: 'Plataforma de comercio electrónico con pagos integrados',
-  },
+    title: 'Portfolio',
+    image: '/projects/portfolio-hero-section.png',
+    shortDescription: 'This current site with all the background tools used.',
+    detailDescription: 'The very portfolio site you are viewing, representing a culmination of modern web development practices. It showcases my professional work and integrates various background tools designed to highlight skills, project history, and technical proficiencies.',
+    tags: ['React', 'FastApi', 'AWS', 'Figma', 'Docker'],
+    techStack: [
+      { name: 'React', icon: 'react' },
+      { name: 'FastApi', icon: 'fastapi' },
+      { name: 'AWS', icon: 'aws' },
+      { name: 'Figma', icon: 'figma' },
+      { name: 'Docker', icon: 'docker' }
+    ],
+    cardGradient: 'linear-gradient(112deg, rgb(248 242 255) 0%, rgb(202 210 255) 100%)',
+    demoUrl: '/',
+    githubUrl: '',
+    gallery: [
+      'https://via.placeholder.com/800x450/ffc300/000814?text=Portfolio+Home',
+      'https://via.placeholder.com/800x450/ffc300/000814?text=Project+View',
+    ]
+  }
 ];
-
