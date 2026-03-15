@@ -5,7 +5,7 @@ import { HeroSection } from './components/sections/HeroSection';
 import { ProjectsSection } from './components/sections/ProjectsSection';
 import { SkillsSection } from './components/sections/SkillsSection';
 import { ChatLayout } from './components/chat/ChatLayout';
-import RealTimeApp from './real-time-app/RealTimeApp';
+import RealTimeLayout from './components/real-time/RealTimeLayout';
 import './App.css';
 
 function HomeView() {
@@ -38,7 +38,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomeView />} />
           <Route path="/chat" element={<ChatView />} />
-          <Route path="/real-time/*" element={<RealTimeApp />} />
+          <Route path="/real-time/*" element={<RealTimeLayout />} />
         </Routes>
       </main>
       {(!isChat && !isRealTime) && <Footer />}

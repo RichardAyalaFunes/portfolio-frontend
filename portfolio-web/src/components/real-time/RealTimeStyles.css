@@ -1,0 +1,245 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+/* Scoped Styles for Real-Time App */
+.rt-typography {
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+    }
+}
+
+@keyframes recordingPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+
+    50% {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+}
+
+.real-time-scope .recording-button {
+    animation: recordingPulse 1.5s infinite;
+}
+
+/* Remaining animations and legacy properties */
+
+/* --- VOICE AGENT UI REFRESH --- */
+
+.va-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: 100vh;
+    background-color: #f8f9fa; /* slightly off-white bg */
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.va-container {
+    width: 100%;
+    max-width: 420px;
+    height: 85vh; /* tall like a phone */
+    min-height: 600px;
+    background-color: #ffffff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    border: 1px solid #eaeaea;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+.va-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 24px;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.va-brand {
+    display: flex;
+    flex-direction: column;
+}
+
+.va-title {
+    font-family: Georgia, 'Times New Roman', Times, serif; /* serif font matching ENZO CUSTOM */
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    margin: 0;
+    line-height: 1.2;
+    color: #000;
+}
+
+.va-title span {
+    font-weight: 400;
+    letter-spacing: 0px;
+}
+
+.va-subtitle {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: #666;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.va-disconnect-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: #333;
+    background: transparent;
+    border: 1px solid #333;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.va-disconnect-btn:hover {
+    background: #333;
+    color: #fff;
+}
+
+.va-icon-small {
+    width: 12px;
+    height: 12px;
+}
+
+.va-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    padding: 24px;
+}
+
+.va-center-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 60px; /* shift slightly up from exact center */
+}
+
+/* Base states of the microphone button */
+.recording-btn {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: transparent;
+    border: 2px solid #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    outline: none;
+    position: relative;
+}
+
+.recording-btn:hover {
+    background-color: rgba(0,0,0,0.03);
+}
+
+.recording-btn.recording {
+    border-color: #000;
+    background-color: rgba(0,0,0,0.05);
+    animation: pulseRing 2s infinite;
+}
+
+.va-mic-icon {
+    width: 32px;
+    height: 32px;
+    color: #000;
+}
+
+@keyframes pulseRing {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.2);
+    }
+    70% {
+        box-shadow: 0 0 0 20px rgba(0, 0, 0, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+    }
+}
+
+.va-connect-text {
+    margin-top: 24px;
+    font-family: monospace;
+    font-size: 12px;
+    color: #666;
+    letter-spacing: 0.5px;
+}
+
+.va-visualizer-container {
+    width: 100%;
+    height: 40px;
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.va-audio-canvas {
+    width: 200px;
+    height: 100%;
+}
+
+.va-bottom-text {
+    position: absolute;
+    bottom: 60px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+}
+
+.va-bottom-text p {
+    font-family: monospace;
+    font-size: 12px;
+    color: #666;
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
+.va-error-container {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fee2e2;
+    border: 1px solid #ef4444;
+    color: #991b1b;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 10;
+}
+
+.va-icon-error {
+    width: 14px;
+    height: 14px;
+}

@@ -182,11 +182,33 @@ export const ProjectCard = ({ project, isSelected, onSelect, className }: Projec
                 className="w-full md:w-[45%] lg:w-[40%] relative min-h-[200px] md:min-h-full"
               >
                 <div className="absolute inset-0 md:inset-y-0 md:-right-8 md:origin-right flex items-center justify-end z-20 pointer-events-none">
-                  <img
-                    src={project.image}
-                    alt={`${project.title} preview`}
-                    className="w-full h-full md:w-auto md:h-[80%] max-w-full object-cover rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] transform md:translate-x-8 border border-white/20 transition-transform duration-500 group-hover:-translate-y-2 pointer-events-auto"
-                  />
+                  {project.demoUrl ? (
+                    <Link
+                      to={project.demoUrl}
+                      onClick={(e) => e.stopPropagation()}
+                      className="relative w-full h-full md:w-auto md:h-[80%] max-w-full transform md:translate-x-8 transition-transform duration-500 group-hover:-translate-y-2 pointer-events-auto group/image block"
+                    >
+                      <img
+                        src={project.image}
+                        alt={`${project.title} preview`}
+                        className="w-full h-full object-cover rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)]"
+                      />
+                      <div className="absolute inset-0 bg-white/50 opacity-0 group-hover/image:opacity-100 transition-opacity duration-300 rounded-2xl flex items-center justify-center pointer-events-none">
+                        <Play className="w-16 h-16 text-slate-700 fill-slate-700 drop-shadow-sm ml-2" />
+                      </div>
+                    </Link>
+                  ) : (
+                    <div className="relative w-full h-full md:w-auto md:h-[80%] max-w-full transform md:translate-x-8 transition-transform duration-500 group-hover:-translate-y-2 pointer-events-auto group/image">
+                      <img
+                        src={project.image}
+                        alt={`${project.title} preview`}
+                        className="w-full h-full object-cover rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)]"
+                      />
+                      <div className="absolute inset-0 bg-white/50 opacity-0 group-hover/image:opacity-100 transition-opacity duration-300 rounded-2xl flex items-center justify-center pointer-events-none">
+                        <Play className="w-16 h-16 text-slate-700 fill-slate-700 drop-shadow-sm ml-2" />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}

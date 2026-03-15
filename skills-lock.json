@@ -6,6 +6,11 @@
       "sourceType": "github",
       "computedHash": "62cd7744438ee2aecc986c520bb603988a78ff6aaaf70a471bf4584fe0b78dae"
     },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "516bd2154eb843a8240e43d5b285229129853114ad7075a5e141e1c08e408c84"
+    },
     "interactive-portfolio": {
       "source": "sickn33/antigravity-awesome-skills",
       "sourceType": "github",
