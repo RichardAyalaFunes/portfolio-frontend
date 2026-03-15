@@ -35,36 +35,36 @@ const RealTimeHome: React.FC<RealTimeHomeProps> = ({
 
                     <div className="w-full max-w-md space-y-4">
                         <button
-                            className="w-full group flex items-center p-6 bg-lightBg-3/70 rounded-2xl transition-all duration-300 shadow-md hover:shadow-xl hover:-translate-y-1 hover:bg-white disabled:transform-none disabled:shadow-md disabled:opacity-50 disabled:cursor-not-allowed will-change-transform"
+                            className="w-full group flex items-center p-6 bg-white/10 rounded-2xl border border-white/60 shadow-[inset_0_2px_5px_rgba(0,0,0,0.06),inset_0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-sm transition-all duration-300 hover:bg-white/80 hover:shadow-[inset_0_1px_2px_rgba(0,0,0,0.02),0_4px_14px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 disabled:transform-none disabled:opacity-50 disabled:cursor-not-allowed will-change-transform"
                             onClick={onConnectRealistic}
                             disabled={isLoading}
                         >
-                            <span className="flex items-center justify-center w-12 h-12 rounded-full text-primary transition-all duration-300 shrink-0 group-hover:scale-110 group-hover:text-blue-500">
+                            <span className="flex items-center justify-center w-12 h-12 rounded-full text-slate-500 transition-all duration-300 shrink-0 group-hover:scale-110 group-hover:text-sky-500">
                                 <User className="w-6 h-6 transition-transform duration-300 group-hover:rotate-12" strokeWidth={1.5} />
                             </span>
                             <div className="ml-6 text-left flex-1">
-                                <div className="text-sm font-semibold tracking-widest text-foreground uppercase mb-1 transition-colors duration-300">
+                                <div className="text-sm font-semibold tracking-widest text-slate-700 uppercase mb-1 transition-colors duration-300">
                                     Realistic Avatar
                                 </div>
-                                <div className="text-sm text-muted-foreground font-light transition-colors duration-300">
+                                <div className="text-sm text-slate-500 font-light transition-colors duration-300">
                                     Smart and realistic, but slow answering
                                 </div>
                             </div>
                         </button>
 
                         <button
-                            className="w-full group flex items-center p-6 bg-lightBg-3/70 rounded-2xl transition-all duration-300 shadow-md hover:shadow-xl hover:-translate-y-1 hover:bg-white disabled:transform-none disabled:shadow-md disabled:opacity-50 disabled:cursor-not-allowed will-change-transform"
+                            className="w-full group flex items-center p-6 bg-white/50 rounded-2xl border border-white/60 shadow-[inset_0_2px_5px_rgba(0,0,0,0.06),inset_0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-sm transition-all duration-300 hover:bg-white/80 hover:shadow-[inset_0_1px_2px_rgba(0,0,0,0.02),0_4px_14px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 disabled:transform-none disabled:opacity-50 disabled:cursor-not-allowed will-change-transform"
                             onClick={onConnectVoice}
                             disabled={isLoading}
                         >
-                            <span className="flex items-center justify-center w-12 h-12 rounded-full text-primary transition-all duration-300 shrink-0 group-hover:scale-110 group-hover:text-indigo-500">
+                            <span className="flex items-center justify-center w-12 h-12 rounded-full text-slate-500 transition-all duration-300 shrink-0 group-hover:scale-110 group-hover:text-indigo-500">
                                 <Mic className="w-6 h-6 transition-transform duration-300 group-hover:-rotate-12" strokeWidth={1.5} />
                             </span>
                             <div className="ml-6 text-left flex-1">
-                                <div className="text-sm font-semibold tracking-widest text-foreground uppercase mb-1 transition-colors duration-300">
+                                <div className="text-sm font-semibold tracking-widest text-slate-700 uppercase mb-1 transition-colors duration-300">
                                     Voice Agent
                                 </div>
-                                <div className="text-sm text-muted-foreground font-light transition-colors duration-300">
+                                <div className="text-sm text-slate-500 font-light transition-colors duration-300">
                                     Fast response without avatar
                                 </div>
                             </div>
@@ -72,12 +72,12 @@ const RealTimeHome: React.FC<RealTimeHomeProps> = ({
                     </div>
 
                     <div className="w-full max-w-md pt-10 text-center flex flex-col items-center">
-                        <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-6">
+                        <p className="text-xs font-semibold tracking-widest text-slate-400 uppercase mb-6">
                             Audio Configuration
                         </p>
                         <button
                             onClick={onAudioTest}
-                            className="group inline-flex items-center justify-center gap-2 px-6 py-3 border border-border/50 bg-background/50 hover:bg-white hover:text-accent-foreground rounded-full text-sm font-medium transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 will-change-transform"
+                            className="group inline-flex items-center justify-center gap-2 px-6 py-3 border border-white/60 bg-white/50 hover:bg-white/80 text-slate-600 hover:text-slate-800 rounded-full text-sm font-medium backdrop-blur-sm shadow-[inset_0_1px_3px_rgba(0,0,0,0.05)] transition-all duration-300 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 will-change-transform"
                         >
                             <Mic className="w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12 group-hover:text-indigo-500" />
                             Test Microphone
@@ -85,10 +85,10 @@ const RealTimeHome: React.FC<RealTimeHomeProps> = ({
                     </div>
 
                     {isLoading && (
-                        <div className="w-full max-w-md flex items-center justify-center p-4 bg-background/50 rounded-2xl border border-border/30 shadow-sm">
-                            <h3 className="flex items-center justify-center gap-2 text-foreground font-medium text-sm">
-                                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                                <span className="text-muted-foreground">{status || "Connection Test..."}</span>
+                        <div className="w-full max-w-md flex items-center justify-center p-4 bg-white/90 backdrop-blur-sm rounded-2xl border border-white/60 shadow-[inset_0_1px_3px_rgba(0,0,0,0.05)]">
+                            <h3 className="flex items-center justify-center gap-2 text-slate-700 font-medium text-sm">
+                                <Loader2 className="w-4 h-4 animate-spin text-sky-500" />
+                                <span className="text-slate-500">{status || "Connection Test..."}</span>
                             </h3>
                         </div>
                     )}
