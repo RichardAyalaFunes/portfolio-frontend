@@ -218,11 +218,10 @@ const RealTimeVoice: React.FC<VoiceAgentViewProps> = ({
                 animationFrameRef.current = requestAnimationFrame(draw);
                 analyser.getByteTimeDomainData(dataArray);
 
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                 ctx.lineWidth = 2;
-                ctx.strokeStyle = '#555555';
+                ctx.strokeStyle = 'rgba(99,102,241,0.75)';
                 ctx.beginPath();
 
                 const sliceWidth = canvas.width / dataArray.length;
@@ -254,8 +253,7 @@ const RealTimeVoice: React.FC<VoiceAgentViewProps> = ({
         if (canvasRef.current) {
             const ctx = canvasRef.current.getContext('2d');
             if (ctx) {
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
             }
         }
     };
@@ -280,51 +278,62 @@ const RealTimeVoice: React.FC<VoiceAgentViewProps> = ({
     if (connectStatus === 'connected') recordingBtnClass += " recording";
 
     return (
-        <GlassCard containerClassName="max-w-[480px]" innerClassName="w-full !p-0 !bg-transparent border-0 shadow-none">
-            <div className="va-container !h-auto !min-h-[500px] w-full bg-white rounded-[2rem]">
-                <div className="va-header">
-                    <div className="va-brand">
-                        <h1 className="va-title">
-                            ENZO <span>CUSTOM</span>
-                        </h1>
-                        <span className="va-subtitle">VOICE AGENT</span>
-                    </div>
-                    <button onClick={handleDisconnect} className="va-disconnect-btn">
-                        <LogOut className="va-icon-small" />
-                        DISCONNECT
-                    </button>
-                </div>
-
-                <div className="va-main">
-                    <div className="va-center-group">
-                        <button
-                            className={recordingBtnClass}
-                            onClick={handleRecordingButtonClick}
-                        >
-                            <Mic className="va-mic-icon" />
-                        </button>
-                        <p className="va-connect-text">
-                            {connectStatus === 'notConnect' ? 'Click to connect' : connectStatus === 'connecting' ? 'Connecting...' : statusText}
-                        </p>
-
-                        {/* Visualizer canvas */}
-                        <div className="va-visualizer-container" style={{ display: connectStatus === 'connected' ? 'block' : 'none' }}>
-                            <canvas ref={canvasRef} className="va-audio-canvas"></canvas>
-                        </div>
-                    </div>
-                    
-                    <div className="va-bottom-text">
-                        <p>{responseStatus}</p>
+        <GlassCard containerClassName="max-w-[480px]" innerClassName="w-full p-8 md:p-12 flex flex-col items-center">
+            <div className="w-full flex items-center justify-between mb-10 pb-6 border-b border-slate-200/50">
+                <div className="flex flex-col">
+                    <h1 className="font-light text-2xl tracking-widest text-slate-800">
+                        VOICE<span className="font-medium text-violet-500">AGENT</span>
+                    </h1>
+                    <div className="text-[10px] tracking-[0.3em] uppercase font-bold text-violet-500 mt-1">
+                        Real-time AI voice conversation
                     </div>
                 </div>
-
-                {error && (
-                    <div className="va-error-container">
-                        <AlertCircle className="va-icon-error" />
-                        <p>{error}</p>
-                    </div>
-                )}
+                <button onClick={handleDisconnect} className="group flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 hover:bg-red-50 hover:border-red-200 text-slate-400 hover:text-red-500 rounded-full text-[10px] font-semibold tracking-wider transition-all duration-300">
+                    <LogOut className="w-3 h-3 group-hover:-translate-x-0.5 transition-transform" />
+                    DISCONNECT
+                </button>
             </div>
+
+            <div className="w-full flex flex-col items-center justify-center space-y-8">
+                <button
+                    className={`group relative flex items-center justify-center w-28 h-28 rounded-full border-4 transition-all duration-300 will-change-transform ${
+                        connectStatus === 'connected' 
+                        ? 'bg-violet-50 border-violet-200 shadow-[0_0_40px_rgba(139,92,246,0.3)]' 
+                        : connectStatus === 'connecting'
+                        ? 'bg-slate-100 border-slate-200 opacity-70 cursor-wait'
+                        : 'bg-white border-slate-100 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02),0_10px_30px_rgba(0,0,0,0.05)] hover:border-violet-200/70 hover:shadow-[0_10px_40px_rgba(139,92,246,0.15)] hover:-translate-y-1'
+                    }`}
+                    onClick={handleRecordingButtonClick}
+                >
+                    <Mic className={`w-10 h-10 transition-colors duration-300 ${connectStatus === 'connected' ? 'text-violet-500 animate-pulse' : 'text-slate-400 group-hover:text-violet-500'}`} />
+                    {connectStatus === 'connected' && (
+                        <div className="absolute inset-[-12px] border border-violet-300/50 rounded-full animate-[ping_2s_infinite]"></div>
+                    )}
+                </button>
+                
+                <div className="text-center space-y-2">
+                    <p className={`text-sm font-semibold tracking-widest uppercase ${connectStatus === 'connected' ? 'text-violet-600' : 'text-slate-600'}`}>
+                        {connectStatus === 'notConnect' ? 'Click to connect' : connectStatus === 'connecting' ? 'Connecting...' : statusText}
+                    </p>
+                    <p className="text-xs text-slate-400 font-medium">
+                        {responseStatus}
+                    </p>
+                </div>
+
+                <div className="w-full h-24 relative flex items-center justify-center opacity-80" style={{ display: connectStatus === 'connected' ? 'flex' : 'none' }}>
+                    <canvas ref={canvasRef} className="w-full h-full absolute inset-0"></canvas>
+                </div>
+            </div>
+
+            {error && (
+                <div className="w-full mt-8 p-4 bg-red-50 border border-red-200/60 rounded-xl text-center space-y-1.5">
+                    <h3 className="flex items-center justify-center gap-1.5 text-red-500 font-medium text-sm">
+                        <AlertCircle className="w-4 h-4" />
+                        Error
+                    </h3>
+                    <p className="text-xs text-red-400">{error}</p>
+                </div>
+            )}
         </GlassCard>
     );
 };

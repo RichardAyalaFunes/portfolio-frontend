@@ -51,33 +51,70 @@ const RealTimeBackground: React.FC = () => {
 
     return (
         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" style={{ backgroundColor: '#080F1F' }}>
-            {/* Primary orb — top-right, deep indigo */}
+
+            {/* ── AMBIENT ORBS — diagonal flow: top-right → bottom-left ── */}
+            {/* Primary anchor — top-right, deep indigo */}
             <div
                 className="absolute -top-[20%] -right-[10%] w-[65vw] h-[65vw] rounded-full pointer-events-none"
-                style={{ background: 'radial-gradient(circle, rgba(67,56,202,0.45) 0%, transparent 65%)' }}
+                style={{ background: 'radial-gradient(circle, rgba(67,56,202,0.5) 0%, transparent 65%)' }}
             />
-            {/* Secondary orb — bottom-left, royal blue */}
+            {/* Secondary anchor — bottom-left, royal blue */}
             <div
                 className="absolute -bottom-[20%] -left-[10%] w-[60vw] h-[60vw] rounded-full pointer-events-none"
-                style={{ background: 'radial-gradient(circle, rgba(29,78,216,0.4) 0%, transparent 65%)' }}
+                style={{ background: 'radial-gradient(circle, rgba(29,78,216,0.45) 0%, transparent 65%)' }}
             />
-            {/* Accent orb — top-left, purple-indigo */}
+            {/* Teal/cyan accent — center-bottom, breaks the monotone palette */}
             <div
-                className="absolute -top-[10%] -left-[15%] w-[45vw] h-[45vw] rounded-full pointer-events-none"
-                style={{ background: 'radial-gradient(circle, rgba(49,46,129,0.35) 0%, transparent 60%)' }}
+                className="absolute bottom-[5%] left-[35%] w-[45vw] h-[45vw] rounded-full pointer-events-none"
+                style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.13) 0%, transparent 65%)' }}
             />
-            {/* Accent orb — bottom-right, deep blue */}
+            {/* Mid-diagonal connector — keeps the eye moving along the diagonal */}
             <div
-                className="absolute -bottom-[10%] -right-[15%] w-[40vw] h-[40vw] rounded-full pointer-events-none"
-                style={{ background: 'radial-gradient(circle, rgba(30,58,138,0.4) 0%, transparent 60%)' }}
-            />
-            {/* Center subtle bloom */}
-            <div
-                className="absolute top-[30%] left-[30%] w-[40vw] h-[40vw] rounded-full pointer-events-none"
-                style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%)' }}
+                className="absolute top-[38%] -right-[5%] w-[35vw] h-[35vw] rounded-full pointer-events-none"
+                style={{ background: 'radial-gradient(circle, rgba(49,46,129,0.28) 0%, transparent 60%)' }}
             />
 
-            {/* Mouse-tracking cyan highlight */}
+            {/* ── HARD CIRCLES — geometric rings with glow, visible on dark bg ── */}
+            {/* Small ring — top-left, indigo */}
+            <div
+                className="absolute top-[5%] left-[10%] w-32 h-32 rounded-full pointer-events-none"
+                style={{
+                    background: 'rgba(99,102,241,0.05)',
+                    border: '1px solid rgba(99,102,241,0.22)',
+                    boxShadow: '0 8px_30px rgba(67,56,202,0.18), inset 0 0 18px rgba(99,102,241,0.08)',
+                }}
+            />
+            {/* Large ring — top-center (partially off-screen), blue */}
+            <div
+                className="absolute -top-[8%] left-[42%] w-64 h-64 rounded-full pointer-events-none"
+                style={{
+                    background: 'rgba(59,130,246,0.04)',
+                    border: '1px solid rgba(59,130,246,0.18)',
+                    boxShadow: '0 12px 40px rgba(29,78,216,0.15), inset 0 0 28px rgba(59,130,246,0.06)',
+                }}
+            />
+            {/* Medium ring — bottom-right, teal accent */}
+            <div
+                className="absolute bottom-[20%] right-[15%] w-56 h-56 rounded-full pointer-events-none"
+                style={{
+                    background: 'rgba(6,182,212,0.04)',
+                    border: '1px solid rgba(6,182,212,0.18)',
+                    boxShadow: '0 12px 40px rgba(6,182,212,0.12), inset 0 0 24px rgba(6,182,212,0.06)',
+                }}
+            />
+
+            {/* ── NOISE TEXTURE — adds tactile grain depth ── */}
+            <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                    opacity: 0.04,
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'repeat',
+                    backgroundSize: '200px 200px',
+                }}
+            />
+
+            {/* ── MOUSE-TRACKING CYAN HIGHLIGHT ── */}
             <div
                 ref={gradientRef}
                 className="pointer-events-none absolute inset-0 z-0 will-change-[background]"
