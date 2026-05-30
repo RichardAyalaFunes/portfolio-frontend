@@ -241,7 +241,7 @@ function RealTimeLayout() {
                             onConnectVoice={() => navigate('/real-time/voice')}
                             onAudioTest={() => navigate('/real-time/audio-test')}
                             onTestRealtime={() => navigate('/real-time/test-realtime')}
-                            onPreviewUI={enterMockMode}
+                            onGoHome={() => navigate('/')}
                         />
                     } />
 

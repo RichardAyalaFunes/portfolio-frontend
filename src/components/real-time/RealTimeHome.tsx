@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Mic, Loader2, AlertCircle, ChevronRight } from 'lucide-react';
+import { User, Mic, Loader2, AlertCircle, ChevronRight, Home } from 'lucide-react';
 import GlassCard from './GlassCard';
 
 interface RealTimeHomeProps {
@@ -10,7 +10,7 @@ interface RealTimeHomeProps {
     onConnectVoice: () => void;
     onAudioTest: () => void;
     onTestRealtime: () => void;
-    onPreviewUI: () => void;
+    onGoHome: () => void;
 }
 
 const RealTimeHome: React.FC<RealTimeHomeProps> = ({
@@ -20,7 +20,7 @@ const RealTimeHome: React.FC<RealTimeHomeProps> = ({
     onConnectRealistic,
     onConnectVoice,
     onAudioTest,
-    onPreviewUI,
+    onGoHome,
 }) => {
     return (
         <GlassCard containerClassName="max-w-4xl" innerClassName="w-full flex justify-center flex-col items-center mt-2 p-4 md:p-12 space-y-12">
@@ -82,21 +82,21 @@ const RealTimeHome: React.FC<RealTimeHomeProps> = ({
                     </div>
 
                     <div className="w-full max-w-md text-center flex flex-col items-center gap-3">
-                        <p className="text-xs font-semibold tracking-widest text-slate-400 uppercase mb-2">
+                        {/* <p className="text-xs font-semibold tracking-widest text-slate-400 uppercase mb-2">
                             Tools
-                        </p>
+                        </p> */}
                         <button
                             onClick={onAudioTest}
-                            className="group inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-slate-100 border border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 text-slate-500 hover:text-indigo-600 rounded-full text-sm font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(0,0,0,0.06)] transition-all duration-300 hover:shadow-[0_4px_14px_rgba(99,102,241,0.15)] hover:-translate-y-0.5 will-change-transform"
+                            className="text-xs tracking-widest uppercase text-slate-400 hover:text-slate-600 font-semibold transition-colors duration-200 mb-3"
                         >
-                            <Mic className="w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" />
                             Test Microphone
                         </button>
                         <button
-                            onClick={onPreviewUI}
-                            className="text-[10px] tracking-widest uppercase text-slate-300 hover:text-slate-500 font-semibold transition-colors duration-200"
+                            onClick={onGoHome}
+                            className="group inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-slate-100 border border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 text-slate-500 hover:text-indigo-600 rounded-full text-sm font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(0,0,0,0.06)] transition-all duration-300 hover:shadow-[0_4px_14px_rgba(99,102,241,0.15)] hover:-translate-y-0.5 will-change-transform"
                         >
-                            Preview UI (no backend)
+                            <Home className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
+                            Portfolio
                         </button>
                     </div>
 

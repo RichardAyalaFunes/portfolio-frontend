@@ -22,7 +22,7 @@ export const ProjectCard = ({ project, isSelected, onSelect, className }: Projec
   return (
     <Card
       className={cn(
-        'group cursor-pointer md:overflow-visible overflow-hidden transition-all duration-300 hover:scale-[1.02] border-1 relative bg-cover bg-center bg-no-repeat',
+        'group md:overflow-visible overflow-hidden transition-all duration-300 hover:scale-[1.02] border-1 relative bg-cover bg-center bg-no-repeat',
         isSelected
           ? 'border-transparent shadow-lg'
           : 'border-slate-200 hover:border-primary/50 hover:shadow-lg',
@@ -31,7 +31,6 @@ export const ProjectCard = ({ project, isSelected, onSelect, className }: Projec
       style={{
         background: project.cardGradient || 'var(--light-bg-3)'
       }}
-      onClick={onSelect}
     >
       {/* Container to prevent hover effect from bleeding outside card's border-radius */}
       <div className="absolute inset-0 rounded-[inherit] overflow-hidden pointer-events-none z-0">
@@ -60,8 +59,13 @@ export const ProjectCard = ({ project, isSelected, onSelect, className }: Projec
           Left side: Content (Title, desc, tags, buttons)
           Right side: Image (Slightly popping out)
         */}
-        <div className="flex flex-col md:flex-row min-h-[220px]">
-
+        <Link
+          to={project.demoUrl || '#'}
+          onClick={(e) => {
+            if (!project.demoUrl) e.preventDefault();
+          }}
+          className="flex flex-col md:flex-row min-h-[220px] group/card cursor-pointer"
+        >
           {/* LEFT: Info Container */}
           <div className="flex-1 flex flex-col justify-between p-6 md:p-8 md:pr-4">
             <div className="space-y-4">
@@ -133,15 +137,20 @@ export const ProjectCard = ({ project, isSelected, onSelect, className }: Projec
             <div className="flex items-center gap-6 pt-6">
               <AnimatePresence mode="wait">
                 {!isSelected && (
-                  <motion.span
+                  <motion.button
                     initial={{ opacity: 0, width: 0 }}
                     animate={{ opacity: 1, width: 'auto' }}
                     exit={{ opacity: 0, width: 0 }}
-                    className="flex items-center gap-2 text-sm font-bold text-darkNavy pb-1 select-none whitespace-nowrap hover:scale-[1.02] transition-transform"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onSelect();
+                    }}
+                    className="flex items-center gap-2 text-sm font-bold text-darkNavy pb-1 select-none whitespace-nowrap hover:scale-[1.02] transition-transform bg-none border-none p-0 cursor-pointer"
                   >
                     <Info className="h-4 w-4" />
                     <span>Details</span>
-                  </motion.span>
+                  </motion.button>
                 )}
               </AnimatePresence>
 
@@ -182,39 +191,21 @@ export const ProjectCard = ({ project, isSelected, onSelect, className }: Projec
                 className="w-full md:w-[45%] lg:w-[40%] relative min-h-[200px] md:min-h-full"
               >
                 <div className="absolute inset-0 md:inset-y-0 md:-right-8 md:origin-right flex items-center justify-end z-20 pointer-events-none">
-                  {project.demoUrl ? (
-                    <Link
-                      to={project.demoUrl}
-                      onClick={(e) => e.stopPropagation()}
-                      className="relative w-full h-full md:w-auto md:h-[80%] max-w-full transform md:translate-x-8 transition-transform duration-500 group-hover:-translate-y-2 pointer-events-auto group/image block"
-                    >
-                      <img
-                        src={project.image}
-                        alt={`${project.title} preview`}
-                        className="w-full h-full object-cover rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)]"
-                      />
-                      <div className="absolute inset-0 bg-white/50 opacity-0 group-hover/image:opacity-100 transition-opacity duration-300 rounded-2xl flex items-center justify-center pointer-events-none">
-                        <Play className="w-16 h-16 text-slate-700 fill-slate-700 drop-shadow-sm ml-2" />
-                      </div>
-                    </Link>
-                  ) : (
-                    <div className="relative w-full h-full md:w-auto md:h-[80%] max-w-full transform md:translate-x-8 transition-transform duration-500 group-hover:-translate-y-2 pointer-events-auto group/image">
-                      <img
-                        src={project.image}
-                        alt={`${project.title} preview`}
-                        className="w-full h-full object-cover rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)]"
-                      />
-                      <div className="absolute inset-0 bg-white/50 opacity-0 group-hover/image:opacity-100 transition-opacity duration-300 rounded-2xl flex items-center justify-center pointer-events-none">
-                        <Play className="w-16 h-16 text-slate-700 fill-slate-700 drop-shadow-sm ml-2" />
-                      </div>
+                  <div className="relative w-full h-full md:w-auto md:h-[80%] max-w-full transform md:translate-x-8 transition-transform duration-500 group-hover/card:-translate-y-2 pointer-events-auto group/image">
+                    <img
+                      src={project.image}
+                      alt={`${project.title} preview`}
+                      className="w-full h-full object-cover rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)]"
+                    />
+                    <div className="absolute inset-0 bg-white/50 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 rounded-2xl flex items-center justify-center pointer-events-none">
+                      <Play className="w-16 h-16 text-slate-700 fill-slate-700 drop-shadow-sm ml-2" />
                     </div>
-                  )}
+                  </div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-
-        </div>
+        </Link>
 
         {/* EXPANDED GALLERY (Bottom of Card) */}
         <AnimatePresence>
