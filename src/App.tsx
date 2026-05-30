@@ -33,7 +33,7 @@ function App() {
 
   return (
     <>
-      <Header />
+      {/* <Header /> */}
       <main className={`flex-1 flex flex-col ${(isChat || isRealTime) ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
         <Routes>
           <Route path="/" element={<HomeView />} />

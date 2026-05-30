@@ -30,7 +30,9 @@ export interface ChatResponsePayload {
 
 export const chatApi = {
     async sendMessage(text: string, chatId?: string): Promise<ChatResponsePayload> {
-        const url = `${import.meta.env.VITE_API_URL || 'https://famous-talented-chamois.ngrok-free.app/webhook-test'}/master-agent/chat/completions`;
+        const host = import.meta.env.VITE_BACKEND_HOST || 'localhost:8000';
+        const baseUrl = host.startsWith('http') ? host : `http://${host}`;
+        const url = `${baseUrl}/master-agent/chat/completions`;
         const payload: ChatRequestPayload = {
             token: 'jwt123',
             messages: [text],

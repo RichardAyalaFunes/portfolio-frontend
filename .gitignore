@@ -13,6 +13,11 @@ dist-ssr
 *.local
 .env
 
+# Build/dev error log dumps
+*_err.txt
+*_errors.txt
+*.vite_error.txt
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

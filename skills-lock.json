@@ -21,6 +21,22 @@
       "sourceType": "github",
       "computedHash": "b2c3ffd537e7534c6f9e118b9ba0b5b6ce99a5f2d8c03258c66ff4ae875d443a"
     },
+    "liveavatar-debug": {
+      "source": "heygen-com/liveavatar-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/liveavatar-debug/SKILL.md",
+      "computedHash": "a316921b032d2a3c76eb7fbb8982407432ee65809c62e83bc70d0a726f3a7312"
+    },
+    "liveavatar-integrate": {
+      "source": "heygen-com/liveavatar-agent-skills",
+      "sourceType": "github",
+      "computedHash": "7cb21511dea88d456a71a5a5ccc839705d5a5b6321aa197eed16cd84c418d0f3"
+    },
+    "top-design": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "computedHash": "ab2840f92dc511e9eb40969be979bbe83fa78aa518158454a9df4620aa78c9df"
+    },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",

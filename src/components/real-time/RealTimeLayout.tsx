@@ -7,469 +7,264 @@ import RealTimeVoice from "./RealTimeVoice";
 import RealTimeAudioTest from "./RealTimeAudioTest";
 import TestRealtimePage from "./TestRealtimePage";
 import RealTimeBackground from "./RealTimeBackground";
-import { fetchSessionToken } from "../../api/liveAvatarApi";
+import { fetchLiteToken, stopSession } from "../../api/liveAvatarApi";
+import { LiveAvatarSession, SessionEvent, AgentEventsEnum, SessionInteractivityMode } from "@heygen/liveavatar-web-sdk";
 import "./RealTimeStyles.css";
 
-const ENABLE_HEYGEN_CONNECTION = false;
+/** Phases of the avatar call lifecycle. */
+export type CallState = 'idle' | 'setup' | 'connecting' | 'connected';
 
-const API_CONFIG = {
-    serverUrl: "https://api.heygen.com",
-    token: import.meta.env.VITE_HEYGEN_API_TOKEN || "",
-    webhookUrl: import.meta.env.VITE_WEBHOOK_N8N_REALISTIC_AVATAR || "",
-    avatarID: "Graham_Chair_Sitting_public",
-};
-
-let sessionInfo: any = null;
-let room: any = null;
-let mediaStream: MediaStream | null = null;
-
-if (typeof window !== 'undefined') {
-    (window as any).mediaStream = null;
-}
+const KEEP_ALIVE_INTERVAL_MS = 3 * 60 * 1000; // 3 min
 
 function RealTimeLayout() {
     const navigate = useNavigate();
+
+    // ── Call lifecycle ─────────────────────────────────────────────────────────
+    const [callState, setCallState] = useState<CallState>('idle');
     const [error, setError] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [isConnected, setIsConnected] = useState(false);
     const [status, setStatus] = useState<string>("Ready to connect");
+
+    // ── Conversation state ─────────────────────────────────────────────────────
+    const [userTranscript, setUserTranscript] = useState<string>("");
+    const [avatarTranscript, setAvatarTranscript] = useState<string>("");
+    const [isAvatarSpeaking, setIsAvatarSpeaking] = useState(false);
+    const [streamReady, setStreamReady] = useState(false);
+    const [outputDeviceId, setOutputDeviceId] = useState<string>("");
+
+    // ── Refs ───────────────────────────────────────────────────────────────────
     const videoRef = useRef<HTMLVideoElement | null>(null);
+    const sessionRef = useRef<LiveAvatarSession | null>(null);
+    const sessionIdRef = useRef<string | null>(null);
+    const keepAliveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    const [isRecording, setIsRecording] = useState(false);
-    const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-    const [transcript, setTranscript] = useState<string>("");
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-    const audioChunksRef = useRef<Blob[]>([]);
-    const isRecordingRef = useRef<boolean>(false);
-
-    const startRecording = async (): Promise<void> => {
-        if (isRecordingRef.current) return;
-
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mediaRecorder = new MediaRecorder(stream);
-            mediaRecorderRef.current = mediaRecorder;
-            audioChunksRef.current = [];
-
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) audioChunksRef.current.push(event.data);
-            };
-
-            mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-                setAudioBlob(audioBlob);
-                stream.getTracks().forEach(track => track.stop());
-                isRecordingRef.current = false;
-                setIsRecording(false);
-            };
-                
-            mediaRecorder.start();
-            isRecordingRef.current = true;
-            setIsRecording(true);
-            setStatus("Grabando audio...");
-        } catch (err: any) {
-            setError(`Error al acceder al micrófono: ${err.message}`);
-        }
-    };
-
-    const stopRecording = (): void => {
-        if (mediaRecorderRef.current && (isRecording || isRecordingRef.current)) {
-            mediaRecorderRef.current.stop();
-            isRecordingRef.current = false;
-            setIsRecording(false);
-            setStatus("Procesando audio...");
-        }
-    };
-
-    const processAudioWithWebhook = async (blob: Blob): Promise<string | undefined> => {
-        if (!blob || blob.size === 0) {
-            setError("No hay audio válido para procesar");
-            return;
-        }
-
-        try {
-            const formData = new FormData();
-            let filename = 'recording.webm';
-            if (blob.type.includes('wav')) filename = 'recording.wav';
-            else if (blob.type.includes('mp3')) filename = 'recording.mp3';
-            else if (blob.type.includes('ogg')) filename = 'recording.ogg';
-
-            formData.append('audio', blob, filename);
-            setStatus("Enviando audio al webhook...");
-
-            const response = await fetch(API_CONFIG.webhookUrl, {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!response.ok) throw new Error(`Error del webhook: ${response.status} ${response.statusText}`);
-
-            try {
-                const result = await response.json();
-                const scriptText = result.script || result.text || result.response;
-                if (!scriptText) throw new Error("El webhook no devolvió un script válido");
-
-                setTranscript(scriptText);
-                setStatus(`Script recibido: "${scriptText}"`);
-
-                if (sessionInfo && isConnected && ENABLE_HEYGEN_CONNECTION) {
-                    await sendText(scriptText, "repeat");
-                    setStatus(`Avatar respondiendo: "${scriptText}"`);
-                } else if (!ENABLE_HEYGEN_CONNECTION) {
-                    setStatus(`Webhook processed: "${scriptText}" (Heygen disabled)`);
-                }
-
-                return scriptText;
-            } catch (jsonErr: any) {
-                const textResponse = await response.text();
-                if (textResponse) {
-                    setTranscript(textResponse);
-                    setStatus(`Respuesta recibida: "${textResponse}"`);
-
-                    if (sessionInfo && isConnected && ENABLE_HEYGEN_CONNECTION) {
-                        await sendText(textResponse, "repeat");
-                        setStatus(`Avatar respondiendo: "${textResponse}"`);
-                    }
-                    return textResponse;
-                } else {
-                    throw new Error("No se pudo procesar la respuesta del webhook");
-                }
-            }
-        } catch (err: any) {
-            setError(`Error al procesar audio: ${err.message}`);
-            setStatus("Error al procesar audio con el webhook");
-        }
-    };
-
-    const testN8nConnection = async (): Promise<boolean> => {
-        if (!API_CONFIG.webhookUrl) return false;
-
-        try {
-            setStatus("Testing n8n webhook connection...");
-            const response = await fetch(API_CONFIG.webhookUrl, { method: 'GET' });
-            if (response.status === 200) return true;
-            setError(`n8n webhook test failed with status ${response.status}.`);
-            return false;
-        } catch (err: any) {
-            setError(`Failed to connect to n8n webhook: ${err.message}.`);
-            return false;
-        }
-    };
-
-    const createSession = async () => {
-        try { await fetchSessionToken(); } catch (apiError: any) { }
-
-        if (ENABLE_HEYGEN_CONNECTION) {
-            const n8nConnectionOk = await testN8nConnection();
-            if (!n8nConnectionOk) return;
-        }
-
-        if (!ENABLE_HEYGEN_CONNECTION) {
-            try {
-                setIsLoading(true);
-                setStatus("Creating mock session (Heygen disabled)...");
-                setError(null);
-
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                sessionInfo = {
-                    data: {
-                        session_id: "mock_session_" + Date.now(),
-                        url: "mock://livekit-url",
-                        access_token: "mock_token"
-                    }
-                };
-
-                setStatus("Mock session created");
-                setIsConnected(true);
-                navigate('/real-time/avatar');
-                setTimeout(() => setStatus("Heygen connection disabled - using mock mode"), 1000);
-                return;
-            } catch (err: any) {
-                setError(`Error: ${err.message}`);
-                setStatus("Connection error");
-            } finally {
-                setIsLoading(false);
-            }
-        }
-
-        if (!API_CONFIG.token) {
-            setError("VITE_HEYGEN_API_TOKEN is not configured in environment variables");
-            return;
-        }
-
-        setStatus("Checking LiveKit Client...");
-        let attempts = 0;
-        while (attempts < 10 && (!(window as any).LivekitClient)) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-            attempts++;
-        }
-
-        if (!(window as any).LivekitClient) {
-            setError("LiveKit Client failed to load.");
-            return;
-        }
-
-        try {
-            setIsLoading(true);
-            setError(null);
-            setStatus("Testing HeyGen API connection...");
-
-            const response = await fetch(`${API_CONFIG.serverUrl}/v1/streaming.new`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${API_CONFIG.token}`,
-                },
-                body: JSON.stringify({
-                    version: "v2",
-                    avatar_id: API_CONFIG.avatarID,
-                }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`HeyGen API connection failed (${response.status}): ${errorData.message}`);
-            }
-
-            sessionInfo = await response.json();
-            setStatus("HeyGen session created ✓");
-            setStatus("Starting avatar stream...");
-
-            const startResponse = await fetch(`${API_CONFIG.serverUrl}/v1/streaming.start`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${API_CONFIG.token}`,
-                },
-                body: JSON.stringify({
-                    session_id: sessionInfo.data.session_id,
-                }),
-            });
-
-            if (!startResponse.ok) {
-                const errorData = await startResponse.json();
-                throw new Error(`Failed to start avatar streaming (${startResponse.status}): ${errorData.message}`);
-            }
-
-            setStatus("Avatar stream started ✓");
-            setStatus("Connecting to LiveKit room...");
-
-            if (typeof window !== 'undefined' && (window as any).LivekitClient) {
-                room = new (window as any).LivekitClient.Room();
-
-                room.on((window as any).LivekitClient.RoomEvent.TrackSubscribed, (track: any) => {
-                    if (track.kind === "video" || track.kind === "audio") {
-                        if (!mediaStream) {
-                            mediaStream = new MediaStream();
-                            (window as any).mediaStream = mediaStream;
-                        }
-                        mediaStream.addTrack(track.mediaStreamTrack);
-                        (window as any).mediaStream = mediaStream;
-
-                        if (videoRef.current) {
-                            videoRef.current.srcObject = mediaStream;
-                            videoRef.current.autoplay = true;
-                            videoRef.current.playsInline = true;
-                            videoRef.current.play().catch(() => { });
-                        }
-                        setStatus("Video stream connected");
-                    }
-                });
-
-                await room.connect(sessionInfo.data.url, sessionInfo.data.access_token);
-                setIsConnected(true);
-                setStatus("All connections successful! ✓");
-
-                navigate('/real-time/avatar');
-                setTimeout(() => {
-                    sendText("Hello, I'm Richard! Ready to chat with you.");
-                }, 2000);
-
-            } else {
-                throw new Error("LiveKit Client is not available.");
-            }
-
-        } catch (err: any) {
-            setError(`Connection failed: ${err.message}`);
-            setStatus("Connection test failed");
-
-            if (sessionInfo) {
-                try {
-                    await fetch(`${API_CONFIG.serverUrl}/v1/streaming.stop`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${API_CONFIG.token}`,
-                        },
-                        body: JSON.stringify({
-                            session_id: sessionInfo.data.session_id,
-                        }),
-                    });
-                    sessionInfo = null;
-                } catch (cleanupErr) { }
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const sendText = async (text: string, taskType: string = "repeat") => {
-        if (!sessionInfo) {
-            setError("No active session");
-            return;
-        }
-
-        if (!ENABLE_HEYGEN_CONNECTION) {
-            try {
-                await new Promise(resolve => setTimeout(resolve, 500));
-                setStatus(`Mock sent: "${text}" (Heygen disabled)`);
-                setTranscript(text);
-            } catch (err: any) {
-                setError(`Error: ${err.message}`);
-            }
-            return;
-        }
-
-        try {
-            const response = await fetch(`${API_CONFIG.serverUrl}/v1/streaming.task`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${API_CONFIG.token}`,
-                },
-                body: JSON.stringify({
-                    session_id: sessionInfo.data.session_id,
-                    text: text,
-                    task_type: taskType,
-                }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Error sending text: ${errorData.message}`);
-            }
-
-            setStatus(`Sent: "${text}" (${taskType})`);
-        } catch (err: any) {
-            setError(`Error sending text: ${err.message}`);
-        }
-    };
-
-    const closeSession = async () => {
-        if (!sessionInfo) {
-            setStatus("No active session");
-            return;
-        }
-
-        if (!ENABLE_HEYGEN_CONNECTION) {
-            try {
-                await new Promise(resolve => setTimeout(resolve, 500));
-                if (videoRef.current) videoRef.current.srcObject = null;
-                sessionInfo = null;
-                room = null;
-                mediaStream = null;
-                setIsConnected(false);
-                setStatus("Mock session closed (Heygen disabled)");
-            } catch (err: any) {
-                setError(`Error: ${err.message}`);
-            }
-            return;
-        }
-
-        try {
-            await fetch(`${API_CONFIG.serverUrl}/v1/streaming.stop`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${API_CONFIG.token}`,
-                },
-                body: JSON.stringify({
-                    session_id: sessionInfo.data.session_id,
-                }),
-            });
-
-            if (room) room.disconnect();
-            if (videoRef.current) videoRef.current.srcObject = null;
-
-            sessionInfo = null;
-            room = null;
-            mediaStream = null;
-            setIsConnected(false);
-            setStatus("Session closed");
-        } catch (err: any) {
-            setError(`Error closing session: ${err.message}`);
-        }
-    };
-
+    // ── Attach SDK stream once both element + stream exist ─────────────────────
+    // SESSION_STREAM_READY can fire while the <video> is still unmounted (during
+    // 'connecting' the avatar UI shows the pre-call setup, not the video element).
+    // This effect re-runs the attach() once the element is mounted in 'connected'.
     useEffect(() => {
-        const loadLiveKit = () => {
-            if (!ENABLE_HEYGEN_CONNECTION) {
-                setStatus("Ready to connect (Heygen disabled)");
-                return;
+        if (callState !== 'connected') return;
+        if (!streamReady) return;
+        const session = sessionRef.current;
+        const el = videoRef.current;
+        if (!session || !el) return;
+        try {
+            session.attach(el);
+            el.autoplay = true;
+            el.playsInline = true;
+            void el.play().catch((e) => console.warn('[Avatar] video.play() blocked:', e));
+            if (outputDeviceId && 'setSinkId' in el) {
+                void (el as any).setSinkId(outputDeviceId).catch((e: unknown) =>
+                    console.warn('[Avatar] setSinkId failed:', e)
+                );
             }
-            if (typeof window !== 'undefined' && (window as any).LivekitClient) {
-                setStatus("LiveKit Client ready");
-                return;
-            }
+            console.log('[Avatar] attach() applied via effect');
+        } catch (err) {
+            console.warn('[Avatar] effect attach failed:', err);
+        }
+    }, [callState, streamReady, outputDeviceId]);
 
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js';
-            script.onload = () => setStatus("LiveKit Client ready");
-            script.onerror = () => setError("Failed to load LiveKit Client");
-            document.head.appendChild(script);
-        };
+    // ── Keep-alive ─────────────────────────────────────────────────────────────
+    const stopKeepAlive = () => {
+        if (keepAliveTimerRef.current) {
+            clearInterval(keepAliveTimerRef.current);
+            keepAliveTimerRef.current = null;
+        }
+    };
 
-        loadLiveKit();
+    const startKeepAlive = () => {
+        stopKeepAlive();
+        keepAliveTimerRef.current = setInterval(() => {
+            try { sessionRef.current?.keepAlive(); } catch { /* ignore */ }
+        }, KEEP_ALIVE_INTERVAL_MS);
+    };
+
+    // ── Session teardown ───────────────────────────────────────────────────────
+    const closeSession = async () => {
+        stopKeepAlive();
+        const s = sessionRef.current;
+        const sid = sessionIdRef.current;
+        sessionRef.current = null;
+        sessionIdRef.current = null;
+
+        if (videoRef.current) videoRef.current.srcObject = null;
+
+        try { s?.voiceChat?.stop(); } catch { /* ignore */ }
+
+        await Promise.allSettled([
+            s ? s.stop().catch((e: unknown) => console.warn("session.stop failed:", e)) : Promise.resolve(),
+            sid ? stopSession(sid) : Promise.resolve(),
+        ]);
+
+        setCallState('idle');
+        setIsAvatarSpeaking(false);
+        setStreamReady(false);
+        setStatus("Session closed");
+        setUserTranscript("");
+        setAvatarTranscript("");
+    };
+
+    // ── Session creation ───────────────────────────────────────────────────────
+    /**
+     * Called by the pre-call screen's "Start Call" button.
+     * inputDeviceId  — chosen microphone (passed to voiceChat.start)
+     * outputDeviceId — chosen speaker (applied via setSinkId on the video element)
+     */
+    const startCall = async (inputDeviceId: string, outputDeviceId: string) => {
+        if (sessionRef.current) return; // guard against double-tap
+
+        setCallState('connecting');
+        setError(null);
+        setStreamReady(false);
+        setOutputDeviceId(outputDeviceId);
+
+        try {
+            setStatus("Obtaining session token…");
+            const tokenResponse = await fetchLiteToken();
+            console.log('[Avatar] POST /api/avatar/token response:', tokenResponse);
+            const { session_id, session_token } = tokenResponse;
+            sessionIdRef.current = session_id;
+
+            setStatus("Initializing avatar…");
+            const session = new LiveAvatarSession(session_token);
+            sessionRef.current = session;
+
+            // ── SDK events ────────────────────────────────────────────────────
+            session.on(SessionEvent.SESSION_STREAM_READY, () => {
+                console.log('[Avatar] SESSION_STREAM_READY fired');
+                setStatus("Stream ready");
+                // Mark stream ready; the useEffect handles attach() once <video> is mounted.
+                setStreamReady(true);
+            });
+
+            session.on(SessionEvent.SESSION_DISCONNECTED, (reason: any) => {
+                console.log('[Avatar] SESSION_DISCONNECTED reason:', reason);
+                stopKeepAlive();
+                setCallState('idle');
+                setIsAvatarSpeaking(false);
+                setStatus("Session disconnected");
+            });
+
+            session.on(AgentEventsEnum.USER_TRANSCRIPTION, (ev: any) => {
+                console.log('[Avatar] USER_TRANSCRIPTION raw event:', ev);
+                const text = ev?.text ?? ev?.transcription ?? String(ev);
+                if (text) setUserTranscript(text);
+            });
+            session.on(AgentEventsEnum.AVATAR_TRANSCRIPTION, (ev: any) => {
+                console.log('[Avatar] AVATAR_TRANSCRIPTION raw event:', ev);
+                const text = ev?.text ?? ev?.transcription ?? String(ev);
+                if (text) setAvatarTranscript(text);
+            });
+            session.on(AgentEventsEnum.AVATAR_SPEAK_STARTED, (ev: any) => {
+                console.log('[Avatar] AVATAR_SPEAK_STARTED', ev);
+                setIsAvatarSpeaking(true);
+            });
+            session.on(AgentEventsEnum.AVATAR_SPEAK_ENDED, (ev: any) => {
+                console.log('[Avatar] AVATAR_SPEAK_ENDED', ev);
+                setIsAvatarSpeaking(false);
+            });
+            session.on(AgentEventsEnum.USER_SPEAK_STARTED, (ev: any) => console.log('[Avatar] USER_SPEAK_STARTED', ev));
+            session.on(AgentEventsEnum.USER_SPEAK_ENDED,   (ev: any) => console.log('[Avatar] USER_SPEAK_ENDED', ev));
+
+            // ── Start session (video element is already mounted in /avatar) ──
+            console.log('[Avatar] calling session.start()…');
+            await session.start();
+            console.log('[Avatar] session.start() resolved. SessionInfo:', (session as any).sessionInfo ?? '(not exposed)');
+
+            // ── Publish user mic to LiveKit (FULL mode requires this) ─────────
+            console.log('[Avatar] calling voiceChat.start() with inputDeviceId:', inputDeviceId || '(default)');
+            await session.voiceChat.start({
+                mode: SessionInteractivityMode.CONVERSATIONAL,
+                ...(inputDeviceId ? { deviceId: inputDeviceId } : {}),
+            });
+            console.log('[Avatar] voiceChat.start() resolved. voiceChat.state:', session.voiceChat.state);
+
+            startKeepAlive();
+            setCallState('connected');
+            setStatus("Connected ✓");
+            console.log('[Avatar] fully connected. session.state:', session.state);
+
+        } catch (err: any) {
+            const message = err?.message ?? String(err);
+            setError(`Connection failed: ${message}`);
+            setStatus("Connection failed");
+            setCallState('setup'); // return to setup so user can retry
+
+            const s = sessionRef.current;
+            const sid = sessionIdRef.current;
+            sessionRef.current = null;
+            sessionIdRef.current = null;
+            await Promise.allSettled([
+                s ? s.stop().catch(() => {}) : Promise.resolve(),
+                sid ? stopSession(sid) : Promise.resolve(),
+            ]);
+            stopKeepAlive();
+        }
+    };
+
+    // Cleanup on unmount.
+    useEffect(() => {
+        return () => { void closeSession(); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const handleDisconnect = () => {
-        closeSession();
-        navigate('/real-time');
+    // ── Navigation handlers ────────────────────────────────────────────────────
+    const handleConnectRealistic = () => {
+        setCallState('setup');
+        navigate('/real-time/avatar');
     };
 
+    const handleDisconnect = () => {
+        void closeSession().finally(() => navigate('/real-time'));
+    };
+
+    // Mock mode — skips backend, goes straight to avatar UI for UI testing.
+    const enterMockMode = () => {
+        sessionIdRef.current = 'mock-session';
+        setCallState('connected');
+        setStatus("Preview mode (no backend)");
+        navigate('/real-time/avatar');
+    };
+
+    // ── Render ─────────────────────────────────────────────────────────────────
     return (
         <div className="root-container w-full min-h-screen relative flex flex-col rt-typography bg-background overflow-x-hidden">
             <RealTimeBackground />
-            
+
             <div className="relative z-10 w-full min-h-screen flex items-center justify-center p-4 py-8 md:p-8">
                 <Routes>
                     <Route path="/" element={
                         <RealTimeHome
-                            isLoading={isLoading}
-                            error={error}
+                            isLoading={false}
+                            error={null}
                             status={status}
-                            onConnectRealistic={() => createSession()}
+                            onConnectRealistic={handleConnectRealistic}
                             onConnectVoice={() => navigate('/real-time/voice')}
                             onAudioTest={() => navigate('/real-time/audio-test')}
                             onTestRealtime={() => navigate('/real-time/test-realtime')}
+                            onPreviewUI={enterMockMode}
                         />
                     } />
+
                     <Route path="/avatar" element={
                         <RealTimeAvatar
+                            callState={callState}
                             status={status}
                             error={error}
                             videoRef={videoRef}
                             onDisconnect={handleDisconnect}
-                            webhookUrl={API_CONFIG.webhookUrl}
-                            onSendText={sendText}
+                            onStartCall={startCall}
+                            isAvatarSpeaking={isAvatarSpeaking}
+                            userTranscript={userTranscript}
+                            avatarTranscript={avatarTranscript}
                         />
                     } />
+
                     <Route path="/voice" element={
-                        <RealTimeVoice
-                            error={error}
-                            onDisconnect={handleDisconnect}
-                        />
+                        <RealTimeVoice error={error} onDisconnect={handleDisconnect} />
                     } />
                     <Route path="/test-realtime" element={<TestRealtimePage />} />
                     <Route path="/audio-test" element={
-                        <RealTimeAudioTest
-                            onBack={() => navigate('/real-time')}
-                            webhookUrl={API_CONFIG.webhookUrl}
-                            onWebhookResponse={(response: string) => {
-                                setTranscript(response);
-                                setStatus(`Respuesta del webhook: "${response}"`);
-                            }}
-                        />
+                        <RealTimeAudioTest onBack={() => navigate('/real-time')} />
                     } />
                 </Routes>
             </div>
