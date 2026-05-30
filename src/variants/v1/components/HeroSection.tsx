@@ -72,14 +72,16 @@ export const HeroSection = ({
     const animate = () => {
       const targetLeft = 70 + mouseXRef.current * 20;
       const targetRight = 75 + (1 - mouseXRef.current) * 20;
-      const targetLeftY = 95 - mouseYRef.current * 29;
+      const targetLeftY = 85 - mouseYRef.current * 29;
 
       leftSizeRef.current += (targetLeft - leftSizeRef.current) * 0.5;
       rightSizeRef.current += (targetRight - rightSizeRef.current) * 0.05;
       leftYRef.current += (targetLeftY - leftYRef.current) * 0.02;
 
       hero.style.backgroundImage = [
-        `radial-gradient(circle at 95% 15%, rgba(94, 152, 198, 0.11) 0%, rgba(185, 216, 242, 0) ${rightSizeRef.current.toFixed(1)}%)`,
+        `radial-gradient(circle at 95% 15%, rgba(94, 152, 198, 0.20) 0%, rgba(185, 216, 242, 0) ${rightSizeRef.current.toFixed(1)}%)`,
+        // `radial-gradient(circle at 95% 15%, rgba(94, 152, 198, 0.20) 0%, rgba(185, 216, 242, 0) ${rightSizeRef.current.toFixed(1)}%)`,
+        // `radial-gradient(circle at 5% ${leftYRef.current.toFixed(1)}%, rgba(204, 18, 191, 0.35) 0%, rgba(131, 198, 255, 0.01) ${leftSizeRef.current.toFixed(1)}%)`,
         `radial-gradient(circle at 5% ${leftYRef.current.toFixed(1)}%, rgba(204, 18, 191, 0.35) 0%, rgba(131, 198, 255, 0.01) ${leftSizeRef.current.toFixed(1)}%)`,
         'linear-gradient(to bottom right, #001f3d 50%, #061632 100%)',
       ].join(', ');

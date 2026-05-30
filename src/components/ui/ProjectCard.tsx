@@ -41,14 +41,15 @@ export const ProjectCard = ({ project, isSelected, onSelect, className }: Projec
       {/* Close Button (Expanded State) */}
       <AnimatePresence>
         {isSelected && (
-          <motion.div
+          <motion.button
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            className="absolute top-4 right-4 z-50 p-2 text-darkNavy hover:bg-black/5 rounded-full transition-colors"
+            onClick={onSelect}
+            className="absolute top-4 right-4 z-50 p-2 text-darkNavy hover:bg-black/5 rounded-full transition-colors bg-none border-none cursor-pointer"
           >
             <X className="h-6 w-6" />
-          </motion.div>
+          </motion.button>
         )}
       </AnimatePresence>
 

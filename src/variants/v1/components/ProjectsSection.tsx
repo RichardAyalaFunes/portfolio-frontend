@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { Search } from 'lucide-react';
 import { projects } from '@/data/projects';
 import type { Project } from '@/types';
@@ -8,6 +9,7 @@ import { cn } from '@/lib/utils';
 export const ProjectsSection = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
 
   const filteredProjects = useMemo(() => {
     if (!searchTerm) return projects;
@@ -27,23 +29,68 @@ export const ProjectsSection = () => {
     if (categoryProjects.length === 0) return null;
 
     return (
-      <div className="mb-10 last:mb-0">
+      <motion.div
+        className="mb-10 last:mb-0"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: false, margin: '-50px' }}
+        variants={{
+          hidden: { opacity: 0 },
+          visible: {
+            opacity: 1,
+            transition: {
+              staggerChildren: 0.1,
+            },
+          },
+        }}
+      >
         <div className="flex flex-col gap-8">
-          {categoryProjects.map((project) => (
-            <ProjectCard
+          {categoryProjects.map((project, idx) => (
+            <motion.div
               key={project.id}
-              project={project}
-              isSelected={selectedProject?.id === project.id}
-              onSelect={() => setSelectedProject(selectedProject?.id === project.id ? null : project)}
-            />
+              variants={{
+                hidden: { opacity: 0, y: 30 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { duration: 0.5, ease: 'easeOut' },
+                },
+              }}
+            >
+              <motion.div
+                whileHover={{ y: -8, transition: { duration: 0.2 } }}
+                className="origin-center"
+                style={{
+                  boxShadow: idx % 2 === 0 ? 'none' : '0 20px 40px rgba(0, 0, 0, 0.08)',
+                  transitionProperty: 'box-shadow',
+                  transitionDuration: '0.2s',
+                }}
+                onHoverStart={(e) => {
+                  if (e.currentTarget instanceof HTMLElement) {
+                    e.currentTarget.style.boxShadow = '0 30px 60px rgba(0, 0, 0, 0.15)';
+                  }
+                }}
+                onHoverEnd={(e) => {
+                  if (e.currentTarget instanceof HTMLElement) {
+                    e.currentTarget.style.boxShadow = idx % 2 === 0 ? 'none' : '0 20px 40px rgba(0, 0, 0, 0.08)';
+                  }
+                }}
+              >
+                <ProjectCard
+                  project={project}
+                  isSelected={selectedProject?.id === project.id}
+                  onSelect={() => setSelectedProject(selectedProject?.id === project.id ? null : project)}
+                />
+              </motion.div>
+            </motion.div>
           ))}
         </div>
-      </div>
+      </motion.div>
     );
   };
 
   return (
-    <section id="projects" className="min-h-screen bg-lightBg-3 py-16 md:py-24">
+    <section ref={sectionRef} id="projects" className="min-h-screen bg-lightBg-3 py-16 md:py-24">
       <div className="container mx-auto px-4 md:px-8 max-w-5xl">
 
         <h2 className="sr-only">Projects</h2>

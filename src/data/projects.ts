@@ -17,7 +17,7 @@ export const projects: Project[] = [
       { name: 'React', icon: 'react' },
       { name: 'FastApi', icon: 'fastapi' }
     ],
-    cardGradient: 'linear-gradient(135deg, rgb(253, 251, 251) 0%, rgb(231 226 222) 100%)',
+    cardGradient: 'linear-gradient(90deg, rgb(154 187 215 / 0%) 0%, rgb(138 147 242 / 23%) 75%, rgb(20 43 108 / 77%) 100%)',
     demoUrl: '/real-time',
     githubUrl: '',
     gallery: [

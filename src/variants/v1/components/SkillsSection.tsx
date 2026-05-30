@@ -1,6 +1,7 @@
 import { skills, skillLevelValues } from '@/data/skills';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { useRef, useEffect, useState } from 'react';
 import {
   Radar,
   RadarChart,
@@ -19,35 +20,105 @@ const transformSkillsData = () => {
 };
 
 export const SkillsSection = () => {
+  const [chartRotation, setChartRotation] = useState(0);
+  const sectionRef = useRef<HTMLElement>(null);
+  const mouseXRef = useRef(0.5);
+  const rafRef = useRef<number | null>(null);
+
   const chartData = transformSkillsData();
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      mouseXRef.current = e.clientX / window.innerWidth;
+    };
+
+    const animate = () => {
+      const targetRotation = (mouseXRef.current - 0.5) * 8;
+      setChartRotation((prev) => prev + (targetRotation - prev) * 0.05);
+      rafRef.current = requestAnimationFrame(animate);
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          window.addEventListener('mousemove', handleMouseMove);
+          rafRef.current = requestAnimationFrame(animate);
+        } else {
+          window.removeEventListener('mousemove', handleMouseMove);
+          if (rafRef.current !== null) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+          }
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    observer.observe(section);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      observer.disconnect();
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   return (
     <section
+      ref={sectionRef}
       id="skills"
       className={cn(
         'container mx-auto max-w-6xl px-4 py-16',
         'md:px-8 md:py-48'
       )}
     >
-      <h1 className="mb-12 text-center text-4xl font-bold text-darkText md:text-5xl">
+      <motion.h1
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-50px' }}
+        transition={{ duration: 0.6 }}
+        className="mb-12 text-center text-4xl font-bold text-darkText md:text-5xl"
+      >
         Skills
-      </h1>
+      </motion.h1>
 
-      <div className="mt-8 flex flex-col items-center justify-center text-md">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-50px' }}
+        transition={{ duration: 0.6, delay: 0.1 }}
+        className="mt-8 flex flex-col items-center justify-center text-md"
+      >
         Here are my fields of expertise I have worked on.
         <br />
         <div className="text-sm">From Basic to Expert.</div>
-      </div>
+      </motion.div>
 
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         whileInView={{ opacity: 1, scale: 1 }}
         viewport={{ once: true, margin: '-50px' }}
-        transition={{ duration: 0.6 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        style={{
+          rotate: chartRotation,
+        }}
         className="mx-auto max-w-4xl"
       >
-        <ResponsiveContainer width="100%" height={500} className="focus:outline-none" style={{ outline: 'none' }}>
-          <RadarChart data={chartData} margin={{ top: 30, right: 30, bottom: 30, left: 30 }} style={{ outline: 'none' }}>
+        <motion.div
+          animate={{
+            opacity: [1, 1.05, 1],
+          }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+        >
+          <ResponsiveContainer width="100%" height={500} className="focus:outline-none" style={{ outline: 'none' }}>
+            <RadarChart data={chartData} margin={{ top: 30, right: 30, bottom: 30, left: 30 }} style={{ outline: 'none' }}>
             <PolarGrid
               stroke="hsl(var(--secondary))"
               strokeOpacity={0.3}
@@ -98,6 +169,7 @@ export const SkillsSection = () => {
             />
           </RadarChart>
         </ResponsiveContainer>
+        </motion.div>
       </motion.div>
     </section>
   );
