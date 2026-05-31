@@ -1,7 +1,6 @@
 import { skills, skillLevelValues } from '@/data/skills';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { useRef, useEffect, useState } from 'react';
 import {
   Radar,
   RadarChart,
@@ -20,55 +19,10 @@ const transformSkillsData = () => {
 };
 
 export const SkillsSection = () => {
-  const [chartRotation, setChartRotation] = useState(0);
-  const sectionRef = useRef<HTMLElement>(null);
-  const mouseXRef = useRef(0.5);
-  const rafRef = useRef<number | null>(null);
-
   const chartData = transformSkillsData();
-
-  useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      mouseXRef.current = e.clientX / window.innerWidth;
-    };
-
-    const animate = () => {
-      const targetRotation = (mouseXRef.current - 0.5) * 8;
-      setChartRotation((prev) => prev + (targetRotation - prev) * 0.05);
-      rafRef.current = requestAnimationFrame(animate);
-    };
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          window.addEventListener('mousemove', handleMouseMove);
-          rafRef.current = requestAnimationFrame(animate);
-        } else {
-          window.removeEventListener('mousemove', handleMouseMove);
-          if (rafRef.current !== null) {
-            cancelAnimationFrame(rafRef.current);
-            rafRef.current = null;
-          }
-        }
-      },
-      { threshold: 0.1 },
-    );
-
-    observer.observe(section);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      observer.disconnect();
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    };
-  }, []);
 
   return (
     <section
-      ref={sectionRef}
       id="skills"
       className={cn(
         'container mx-auto max-w-6xl px-4 py-16',
@@ -102,9 +56,6 @@ export const SkillsSection = () => {
         whileInView={{ opacity: 1, scale: 1 }}
         viewport={{ once: true, margin: '-50px' }}
         transition={{ duration: 0.6, delay: 0.2 }}
-        style={{
-          rotate: chartRotation,
-        }}
         className="mx-auto max-w-4xl"
       >
         <motion.div

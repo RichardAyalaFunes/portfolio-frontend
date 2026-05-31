@@ -21,8 +21,8 @@ export const projects: Project[] = [
     demoUrl: '/real-time',
     githubUrl: '',
     gallery: [
-      'https://via.placeholder.com/800x450/001d3d/fefae0?text=Avatar+Interaction',
-      'https://via.placeholder.com/800x450/001d3d/fefae0?text=Voice+Agent',
+      '/projects/real-time-1.png',
+      '/projects/real-time-2.png',
     ]
   },
   {

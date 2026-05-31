@@ -9,6 +9,7 @@ export const ChatLayout = () => {
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isTipsOpen, setIsTipsOpen] = useState(false);
     const [tipsHighlightTrigger, setTipsHighlightTrigger] = useState(0);
+    const [showBanner, setShowBanner] = useState(true);
 
     const handleOpenTipsAndHighlight = () => {
         setIsTipsOpen(true);
@@ -17,6 +18,33 @@ export const ChatLayout = () => {
 
     return (
         <div className="flex-1 flex w-full h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 relative overflow-hidden z-0">
+            {/* Under Construction Banner */}
+            <AnimatePresence>
+                {showBanner && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className="absolute top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-xl px-4"
+                    >
+                        <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 text-amber-900 rounded-lg px-4 py-3 shadow-md">
+                            <span className="text-amber-500 mt-0.5 flex-shrink-0">⚠</span>
+                            <p className="text-sm flex-1">
+                                <strong>Under construction.</strong> The backend is disabled. It is going to be an integration with <strong>n8n</strong>.
+                            </p>
+                            <button
+                                onClick={() => setShowBanner(false)}
+                                className="text-amber-500 hover:text-amber-700 flex-shrink-0 ml-1"
+                                aria-label="Dismiss"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Modern Radial Gradients UI overlay */}
             <div
                 className="absolute inset-0 pointer-events-none z-[-1]"

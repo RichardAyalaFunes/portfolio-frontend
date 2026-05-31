@@ -1,4 +1,5 @@
-import { X, Linkedin } from 'lucide-react';
+import { X, Linkedin, Home } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { LINKEDIN_URL } from '../../config/constants';
 
 interface ChatHistoryProps {
@@ -6,6 +7,8 @@ interface ChatHistoryProps {
 }
 
 export const ChatHistory = ({ onClose }: ChatHistoryProps) => {
+    const navigate = useNavigate();
+
     // Dummy data for history
     const historyItems = [
         { id: 1, title: 'Discussion about Next.js' },
@@ -15,6 +18,15 @@ export const ChatHistory = ({ onClose }: ChatHistoryProps) => {
 
     return (
         <div className="h-full flex flex-col p-4 relative">
+            {/* Portfolio home link */}
+            <button
+                onClick={() => navigate('/')}
+                className="group w-full flex items-center gap-2 px-3 py-2.5 mb-6 rounded-xl bg-white/5 hover:bg-white/90 border border-white/5 hover:border-white transition-all duration-200 hover:shadow-lg hover:scale-[1.01]"
+            >
+                <Home size={15} className="text-primary group-hover:text-primary flex-shrink-0" />
+                <span className="text-sm font-medium text-darkText/90 group-hover:text-darkText transition-colors">Go Home</span>
+            </button>
+
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-sm uppercase font-bold text-darkText pl-3">Chat History</h2>
                 {/* Only show close button on mobile */}
