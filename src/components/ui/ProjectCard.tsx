@@ -4,6 +4,7 @@ import { cn } from '../../lib/utils';
 import { Play, X, Code2, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { useRef, useCallback, type MouseEvent } from 'react';
 
 /**
  * Props para el componente ProjectCard
@@ -19,8 +20,44 @@ interface ProjectCardProps {
  * Componente ProjectCard para la lista "Master"
  */
 export const ProjectCard = ({ project, isSelected, onSelect, className }: ProjectCardProps) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleDetailsClick = useCallback((e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!cardRef.current) { onSelect(); return; }
+
+    // Capture position BEFORE onSelect triggers re-render and animation.
+    // Measuring after would race against scroll-anchoring adjustments the
+    // browser makes when the card's AnimatePresence exit animation shrinks
+    // the layout and the browser tries to compensate to keep visible content
+    // in view.
+    const rect = cardRef.current.getBoundingClientRect();
+    const isDesktop = window.innerWidth >= 768;
+    const topMargin = isDesktop ? 96 : 64;
+    const targetY = Math.max(0, window.scrollY + rect.top - topMargin);
+
+    // Disable scroll anchoring before any layout changes so the browser
+    // doesn't auto-adjust the scroll position during the card expansion.
+    document.documentElement.style.overflowAnchor = 'none';
+
+    // Instant scroll so the position is committed before the card expands.
+    // Smooth scroll is unreliable here because the browser adjusts its own
+    // smooth-scroll target in response to layout shifts caused by the
+    // framer-motion card expansion animation running simultaneously.
+    window.scrollTo(0, targetY);
+
+    onSelect();
+
+    // Restore scroll anchoring after the expansion animation settles.
+    setTimeout(() => {
+      document.documentElement.style.overflowAnchor = '';
+    }, 800);
+  }, [onSelect]);
+
   return (
     <Card
+      ref={cardRef}
       className={cn(
         'group md:overflow-visible overflow-hidden transition-all duration-300 hover:scale-[1.02] border-1 relative bg-cover bg-center bg-no-repeat',
         isSelected
@@ -60,13 +97,7 @@ export const ProjectCard = ({ project, isSelected, onSelect, className }: Projec
           Left side: Content (Title, desc, tags, buttons)
           Right side: Image (Slightly popping out)
         */}
-        <Link
-          to={project.demoUrl || '#'}
-          onClick={(e) => {
-            if (!project.demoUrl) e.preventDefault();
-          }}
-          className="flex flex-col md:flex-row min-h-[220px] group/card cursor-pointer"
-        >
+        <div className="flex flex-col md:flex-row min-h-[220px] group/card">
           {/* LEFT: Info Container */}
           <div className="flex-1 flex flex-col justify-between p-6 md:p-8 md:pr-4">
             <div className="space-y-4">
@@ -139,13 +170,10 @@ export const ProjectCard = ({ project, isSelected, onSelect, className }: Projec
               <AnimatePresence mode="wait">
                 {!isSelected && (
                   <motion.button
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: 'auto' }}
+                    initial={{ opacity: 1, width: 'auto' }}
                     exit={{ opacity: 0, width: 0 }}
                     onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onSelect();
+                      handleDetailsClick(e);
                     }}
                     className="flex items-center gap-2 text-sm font-bold text-darkNavy pb-1 select-none whitespace-nowrap hover:scale-[1.02] transition-transform bg-none border-none p-0 cursor-pointer"
                   >
@@ -206,7 +234,7 @@ export const ProjectCard = ({ project, isSelected, onSelect, className }: Projec
               </motion.div>
             )}
           </AnimatePresence>
-        </Link>
+        </div>
 
         {/* EXPANDED GALLERY (Bottom of Card) */}
         <AnimatePresence>

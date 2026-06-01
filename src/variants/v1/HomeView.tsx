@@ -1,13 +1,13 @@
 import { HeroSection } from './components/HeroSection';
 import { ProjectsSection } from './components/ProjectsSection';
-import { SkillsSection } from './components/SkillsSection';
+import { ExperienceSection } from './components/ExperienceSection';
 
 export default function HomeView() {
   return (
     <>
       <HeroSection />
       <ProjectsSection />
-      <SkillsSection />
+      <ExperienceSection />
     </>
   );
 }
