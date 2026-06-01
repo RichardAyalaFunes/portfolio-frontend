@@ -53,6 +53,31 @@
     background-color: #ffffff;
   }
 
+  /* Scrollbar Styling */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #a78bba;
+    border-radius: 5px;
+    transition: background 0.3s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #8b6fa3;
+  }
+
+  /* Firefox scrollbar styling */
+  * {
+    scrollbar-color: #a78bba transparent;
+    scrollbar-width: thin;
+  }
+
   /* Typography Scale */
   h1 {
     font-size: 4.5rem;

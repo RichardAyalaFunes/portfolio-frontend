@@ -15,6 +15,7 @@ export const HeroSection = ({
 }: HeroSectionProps) => {
   const [init, setInit] = useState(false);
   const heroRef = useRef<HTMLElement>(null);
+  const isSnapScrollingRef = useRef(false);
   const leftSizeRef = useRef(50);
   const rightSizeRef = useRef(5);
   const leftYRef = useRef(95);
@@ -112,6 +113,22 @@ export const HeroSection = ({
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    const hero = heroRef.current;
+    if (!hero) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.deltaY <= 0 || isSnapScrollingRef.current) return;
+      e.preventDefault();
+      isSnapScrollingRef.current = true;
+      smoothScroll('#projects');
+      setTimeout(() => { isSnapScrollingRef.current = false; }, 1000);
+    };
+
+    hero.addEventListener('wheel', handleWheel, { passive: false });
+    return () => hero.removeEventListener('wheel', handleWheel);
+  }, [smoothScroll]);
 
   const particlesOptions: ISourceOptions = useMemo(
     () => ({
@@ -216,14 +233,14 @@ export const HeroSection = ({
             </span>
 
             <div className="col-start-2 row-start-1 flex flex-col items-start justify-center py-4 text-left">
-              <h1 className="text-[#fefae0] text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight">
+              <h1 className="text-lightText text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight">
                 Hi, I'm {name.split(' ')[0]}
               </h1>
-              <h2 className="text-[#ffc300] text-3xl md:text-4xl lg:text-5xl font-bold mt-3 drop-shadow-md">
+              <h2 className="text-accent-gold text-3xl md:text-4xl lg:text-5xl font-bold mt-3 drop-shadow-md">
                 {title}
               </h2>
-              <p className="text-[#fefae0]/60 mt-6 tracking-[0.2em] uppercase text-sm font-medium">
-                1% better every day
+              <p className="mt-6 tracking-[0.2em] uppercase text-sm font-medium">
+                <strong><span className="text-lightText">From idea →</span>{' '}<span className="text-accent-gold">To Product</span></strong>
               </p>
             </div>
 
@@ -232,18 +249,18 @@ export const HeroSection = ({
             </span>
 
             <nav className="col-start-2 row-start-2 mt-14 w-full">
-              <ul className="flex items-center justify-start gap-6 text-[#fefae0]/80 text-xl font-medium">
+              <ul className="flex items-center justify-start gap-6 text-lightText/80 text-xl font-medium">
                 {[
                   { label: 'Projects', href: '#projects' },
-                  { label: 'Skills', href: '#skills' },
+                  { label: 'Experience', href: '#experience' },
                   { label: 'Contact Me', href: '#contact' },
                 ].map((item, index, arr) => (
                   <li key={item.label} className="flex items-center gap-6 group cursor-pointer">
                     <button
                       onClick={() => smoothScroll(item.href)}
-                      className="relative flex items-center transition-colors group-hover:text-[#ffc300] bg-none border-none p-0 font-inherit"
+                      className="relative flex items-center transition-colors group-hover:text-accent-gold bg-none border-none p-0 font-inherit"
                     >
-                      <span className="absolute -left-5 opacity-0 group-hover:opacity-100 transition-opacity text-[#ffc300] font-bold">
+                      <span className="absolute -left-5 opacity-0 group-hover:opacity-100 transition-opacity text-accent-gold font-bold">
                         &gt;
                       </span>
                       {item.label}

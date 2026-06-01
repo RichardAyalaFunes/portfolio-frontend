@@ -43,8 +43,10 @@ export const projects: Project[] = [
     demoUrl: '/chat',
     githubUrl: '',
     gallery: [
-      'https://via.placeholder.com/800x450/003566/fefae0?text=Chat+Interface',
-      'https://via.placeholder.com/800x450/003566/fefae0?text=Workflow+Builder',
+      '/projects/chat-1.png',
+      '/projects/chat-4.png',
+      '/projects/chat-2.png',
+      '/projects/chat-3.png',
     ]
   },
   {
@@ -66,8 +68,8 @@ export const projects: Project[] = [
     demoUrl: '/',
     githubUrl: '',
     gallery: [
-      'https://via.placeholder.com/800x450/ffc300/000814?text=Portfolio+Home',
-      'https://via.placeholder.com/800x450/ffc300/000814?text=Project+View',
+      '/projects/portfolio-1.png',
+      '/projects/portfolio-2.png',
     ]
   }
 ];

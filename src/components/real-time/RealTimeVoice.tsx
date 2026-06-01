@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { LogOut, Mic, AlertCircle } from 'lucide-react';
-import { AI_PROMPTS } from '../../config/aiPrompts';
+import { AI_PROMPTS } from '@/config/aiPrompts';
+import { createRealtimeSession } from '@/api/realtimeApi';
 import GlassCard from './GlassCard';
 
 interface VoiceAgentViewProps {
@@ -40,27 +41,11 @@ const RealTimeVoice: React.FC<VoiceAgentViewProps> = ({
     };
 
     const startConnection = async () => {
-        addLog('1. Requesting ephemeral token...');
-        const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-        if (!apiKey) throw new Error("VITE_OPENAI_API_KEY is missing in environment variables.");
-
-        const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-                model: "gpt-4o-realtime-preview-2024-12-17",
-                voice: "alloy",
-            }),
-        });
-
-        if (!response.ok) throw new Error(`Error obtaining token: ${response.statusText}`);
-        const data = await response.json();
+        addLog('1. Requesting ephemeral token from backend...');
+        const data = await createRealtimeSession();
         addLog('2. Ephemeral token obtained successfully');
-        setOutputText(JSON.stringify(data, null, 2));
-        return data.client_secret.value;
+        setOutputText(`Ephemeral key expires at: ${new Date(data.expires_at * 1000).toLocaleTimeString()}`);
+        return data.client_secret;
     };
 
     const initWebRTC = async () => {
@@ -133,9 +118,7 @@ const RealTimeVoice: React.FC<VoiceAgentViewProps> = ({
             await pc.setLocalDescription(offer);
             addLog('SDP offer created');
 
-            const baseUrl = "https://api.openai.com/v1/realtime";
-            const model = "gpt-4o-realtime-preview-2024-12-17";
-            const sdpResponse = await fetch(`${baseUrl}?model=${model}`, {
+            const sdpResponse = await fetch("https://api.openai.com/v1/realtime/calls", {
                 method: "POST",
                 body: offer.sdp,
                 headers: {
