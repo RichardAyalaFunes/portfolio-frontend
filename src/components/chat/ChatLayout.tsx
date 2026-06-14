@@ -21,14 +21,14 @@ export const ChatLayout = () => {
             {/* Under Construction Banner */}
             <AnimatePresence>
                 {showBanner && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.3 }}
-                        className="absolute top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-xl px-4"
-                    >
-                        <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 text-amber-900 rounded-lg px-4 py-3 shadow-md">
+                    <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-xl px-4">
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3 }}
+                            className="flex items-start gap-3 bg-amber-50 border border-amber-300 text-amber-900 rounded-lg px-4 py-3 shadow-md"
+                        >
                             <span className="text-amber-500 mt-0.5 flex-shrink-0">⚠</span>
                             <p className="text-sm flex-1">
                                 <strong>Under construction.</strong> The backend is disabled. It is going to be an integration with <strong>n8n</strong>.
@@ -40,8 +40,8 @@ export const ChatLayout = () => {
                             >
                                 <X size={16} />
                             </button>
-                        </div>
-                    </motion.div>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
 
