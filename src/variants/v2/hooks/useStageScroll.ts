@@ -57,7 +57,30 @@ export function useStageScroll(projectCount: number) {
       }
       for (const id of SLICE_IDS) {
         const el = document.getElementById(id);
-        if (el) stops.push(absTop(el));
+        if (!el) continue;
+        const top = absTop(el);
+        // Bottom-aligned scroll position for this section (how far you can
+        // scroll while its content still occupies the screen).
+        const maxScroll = top + Math.max(0, el.offsetHeight - window.innerHeight);
+        stops.push(top);
+        // A section meaningfully taller than one screen (e.g. Achievements'
+        // 3 cards) gets intermediate stops, so a single scroll steps DOWN
+        // THROUGH it rather than skipping straight to the next section. You
+        // always see every card before the section hands off. A section that is
+        // within ~15% of one screen counts as "fits" and keeps only its top
+        // stop (whole section visible at once, no fiddly micro-nudge).
+        if (maxScroll - top > window.innerHeight * 0.15) {
+          const step = window.innerHeight * 0.9; // slight overlap = no bisected card
+          for (let y = top + step; y < maxScroll - 8; y += step) stops.push(y);
+          stops.push(maxScroll);
+        }
+      }
+      // Final stop: ease all the way into the footer ("Get in Touch") so the
+      // last staged scroll leaves the skills section completely behind.
+      const footer = document.querySelector('footer');
+      if (footer) {
+        const pageMax = document.documentElement.scrollHeight - window.innerHeight;
+        stops.push(Math.min(absTop(footer as HTMLElement), pageMax));
       }
       return [...new Set(stops.map((s) => Math.round(s)))].sort((a, b) => a - b);
     };

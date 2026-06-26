@@ -260,7 +260,7 @@ export const AchievementsSection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.8, ease: EASE_OUT }}
-          className="text-[11px] font-semibold uppercase tracking-[0.4em] text-white/40"
+          className="text-center text-[11px] font-semibold uppercase tracking-[0.4em] text-white/40 md:text-left"
         >
           What I Build
         </motion.p>
@@ -269,7 +269,7 @@ export const AchievementsSection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.85, ease: EASE_OUT, delay: 0.08 }}
-          className="mt-3 text-4xl md:text-6xl font-bold tracking-tight text-white"
+          className="mt-3 text-center text-4xl md:text-6xl font-bold tracking-tight text-white md:text-left"
         >
           Achievements
         </motion.h2>

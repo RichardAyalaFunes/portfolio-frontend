@@ -131,18 +131,18 @@ export const TrajectorySection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.8, ease: EASE_OUT }}
-          className="text-[11px] font-semibold uppercase tracking-[0.4em] text-white/40"
+          className="text-center text-[11px] font-semibold uppercase tracking-[0.4em] text-white/40 md:text-left"
         >
-          Trajectory
+          Where I've been
         </motion.p>
         <motion.h2
           initial={{ opacity: 0, y: 26 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.85, ease: EASE_OUT, delay: 0.08 }}
-          className="mt-3 text-4xl md:text-6xl font-bold tracking-tight text-white"
+          className="mt-3 text-center text-4xl md:text-6xl font-bold tracking-tight text-white md:text-left"
         >
-          Where I've been
+          Trajectory
         </motion.h2>
 
         <div className="mt-14 flex flex-col items-stretch gap-4 md:flex-row md:items-center md:gap-0">

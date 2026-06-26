@@ -48,6 +48,20 @@ export const skillLevelValues: Record<Skill['level'], number> = {
 };
 
 /**
+ * Mapeo de niveles de habilidad a una puntuación 0–5
+ * (usado por la radar/spider chart de la variante 2)
+ */
+export const skillLevelScore: Record<Skill['level'], number> = {
+  Basic: 2,
+  Intermediate: 3,
+  Advanced: 4,
+  Expert: 5,
+};
+
+/** Escala máxima de la puntuación de habilidades. */
+export const SKILL_MAX_SCORE = 5;
+
+/**
  * Mapeo de niveles de habilidad a colores
  */
 export const skillLevelColors: Record<Skill['level'], string> = {

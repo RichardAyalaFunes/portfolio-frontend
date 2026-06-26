@@ -8,8 +8,8 @@ export interface VariantEntry {
 export const variantConfig = {
   defaultVariant: 1,
   variants: [
-    { urlNumber: 1, folder: 'v1', name: 'Classic', enabled: true },
-    { urlNumber: 2, folder: 'v2', name: 'Cinematic', enabled: true },
+    { urlNumber: 1, folder: 'v2', name: 'Cinematic', enabled: true },
+    { urlNumber: 2, folder: 'v1', name: 'Classic', enabled: true },
   ] satisfies VariantEntry[],
 };
 

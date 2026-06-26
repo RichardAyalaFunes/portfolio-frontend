@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { PROJECTS_TITLE_PROGRESS } from './ProjectsSection';
 
 interface HeroSectionProps {
   name?: string;
@@ -55,6 +56,25 @@ export const HeroSection = ({
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
       return;
     }
+
+    // The projects section is a tall scroll-driven stage: its top is
+    // scrollYProgress = 0, where the floor/title are still hidden (the title
+    // only reaches full opacity at PROJECTS_TITLE_PROGRESS). Landing on the raw
+    // top therefore shows a black screen. Scroll instead to the same "title
+    // stop" the wheel/stage controller snaps to, so a click reveals exactly
+    // what a manual scroll would. Other anchors (#skills, #contact) are normal
+    // sections — top-align is correct.
+    if (targetId === '#projects') {
+      const projects = element as HTMLElement;
+      const span = Math.max(1, projects.offsetHeight - window.innerHeight);
+      const top = projects.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({
+        top: top + PROJECTS_TITLE_PROGRESS * span,
+        behavior: 'smooth',
+      });
+      return;
+    }
+
     (element as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 

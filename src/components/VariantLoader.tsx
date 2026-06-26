@@ -1,7 +1,10 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { getVariantByUrl, variantConfig } from '@/config/variants';
-import { VariantNavigator } from '@/components/ui/VariantNavigator';
+// Variant navigator arrows are hidden for now. Other variants stay reachable by
+// direct URL (e.g. /2). To bring the arrows back, uncomment this import and the
+// <VariantNavigator /> usage below.
+// import { VariantNavigator } from '@/components/ui/VariantNavigator';
 
 const variantModules: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
   v1: lazy(() => import('@/variants/v1/HomeView')),
@@ -28,7 +31,7 @@ export function VariantLoader() {
 
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center" />}>
-      <VariantNavigator />
+      {/* <VariantNavigator /> */}
       <LazyHomeView />
     </Suspense>
   );

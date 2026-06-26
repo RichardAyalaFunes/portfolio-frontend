@@ -30,6 +30,28 @@ const CATEGORY_LABEL: Record<Project['category'], string> = {
   'Front-end Project': 'Front-end',
 };
 
+/* ── v2-only card backgrounds ───────────────────────────────────────────────
+   The shared project data carries a `cardGradient` tuned for the LIGHT "Classic"
+   variant. Several of those are pale (cream / lavender) and become unreadable on
+   THIS dark "Cinematic" stage — white text on a light card. Rather than edit the
+   shared data (which would also change the Classic design at its own URL), this
+   variant keeps its OWN backgrounds: dark and lightly translucent like the first
+   card, each tinted with an accent colour pulled from that project's image, so
+   the card reads as "the same colour as the screenshot". Projects are few and
+   stable here, so a small id-keyed map beats threading per-variant colours
+   through the data layer. Unmapped ids fall back to the shared gradient. */
+const V2_CARD_BG: Record<string, string> = {
+  // Real Time Avatars → deep LiveAvatar navy/blue
+  'ai-1':
+    'radial-gradient(120% 80% at 75% 8%, rgb(90 130 220 / 0.16) 0%, transparent 55%), linear-gradient(140deg, rgb(20 40 96 / 0.84) 0%, rgb(8 14 38 / 0.92) 100%)',
+  // Multimodal agent → indigo/violet of the chat "sparkle" accent
+  'ai-2':
+    'radial-gradient(120% 80% at 78% 8%, rgb(140 109 242 / 0.18) 0%, transparent 55%), linear-gradient(140deg, rgb(46 38 96 / 0.84) 0%, rgb(12 12 34 / 0.92) 100%)',
+  // Portfolio → dark hero navy with a gold glow (the hero's accent text)
+  'frontend-1':
+    'radial-gradient(120% 80% at 80% 6%, rgb(212 168 70 / 0.14) 0%, transparent 52%), linear-gradient(140deg, rgb(26 33 84 / 0.84) 0%, rgb(10 14 40 / 0.92) 100%)',
+};
+
 /* ── Shared stage geometry ───────────────────────────────────────────────────
    The card timeline and the page's stage-scroll controller must agree on where
    each "key state" sits inside this section's scroll, so the math lives here and
@@ -198,12 +220,13 @@ function ProjectStage({
     >
       <motion.article
         style={{ pointerEvents }}
-        className="relative w-[min(90vw,760px)] overflow-hidden rounded-[28px] border border-white/15 shadow-[0_40px_120px_-30px_rgba(0,0,0,0.85)]"
+        className="relative w-[min(90vw,760px)] overflow-hidden rounded-[28px] border border-none shadow-[0_40px_120px_-30px_rgba(0,0,0,0.85)]"
       >
-        {/* Card surface — uses the project's own gradient as the "color square" */}
+        {/* Card surface — dark, image-tinted gradient owned by THIS variant
+            (see V2_CARD_BG); falls back to the shared gradient if unmapped. */}
         <div
           className="absolute inset-0"
-          style={{ background: project.cardGradient ?? '#0b1224' }}
+          style={{ background: V2_CARD_BG[project.id] ?? project.cardGradient ?? '#0b1224' }}
           aria-hidden="true"
         />
         <div className="absolute inset-0 bg-gradient-to-br from-[#060912]/35 via-transparent to-[#060912]/55" aria-hidden="true" />
