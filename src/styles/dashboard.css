@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+/* Job dashboard -- graphite dark, scoped so it never bleeds into the other
+   sub-apps. See DESIGN_SYSTEM.md "Adding a new sub-app route". */
+.dashboard-scope {
+    --db-bg: #0b0e14;
+    --db-surface: #141821;
+    --db-surface-2: #1b2130;
+    --db-border: #262d3d;
+    --db-text: #e6e9f0;
+    --db-muted: #98a2b5;
+    --db-accent: #5b9dff;
+
+    --db-band-excellent: #ffd166;
+    --db-band-good: #6ee7b7;
+    --db-band-below: #9aa3b2;
+    --db-band-flag: #c792ea;
+    --db-band-drop: #ef6f6f;
+
+    --db-fresh-hot: #4ade80;
+    --db-fresh-warm: #5b9dff;
+    --db-fresh-stale: #6b7280;
+
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    background: var(--db-bg);
+    color: var(--db-text);
+    min-height: 100vh;
+    font-size: 15px;
+}
+
+@media (min-width: 640px) {
+    .dashboard-scope {
+        font-size: 16px;
+    }
+}
+
+.dashboard-scope button {
+    font-family: inherit;
+    min-height: 44px;
+}
+
+.dashboard-scope input,
+.dashboard-scope textarea,
+.dashboard-scope select {
+    font-family: inherit;
+    background: var(--db-surface-2);
+    border: 1px solid var(--db-border);
+    color: var(--db-text);
+    border-radius: 0.75rem;
+}
+
+.dashboard-scope input::placeholder,
+.dashboard-scope textarea::placeholder {
+    color: var(--db-muted);
+}
+
+.dashboard-scope ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.dashboard-scope ::-webkit-scrollbar-thumb {
+    background: var(--db-border);
+    border-radius: 999px;
+}
+
+.dashboard-band-excellent { color: var(--db-band-excellent); }
+.dashboard-band-good { color: var(--db-band-good); }
+.dashboard-band-below { color: var(--db-band-below); }
+.dashboard-band-flag { color: var(--db-band-flag); }
+.dashboard-band-drop { color: var(--db-band-drop); }
+
+.dashboard-fresh-hot { color: var(--db-fresh-hot); }
+.dashboard-fresh-warm { color: var(--db-fresh-warm); }
+.dashboard-fresh-stale { color: var(--db-fresh-stale); }
+
+@keyframes dashboard-sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+.dashboard-sheet-enter {
+    animation: dashboard-sheet-up 0.25s ease-out;
+}
+
+@keyframes dashboard-skeleton-pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.9; }
+}
+
+.dashboard-skeleton {
+    background: var(--db-surface-2);
+    border-radius: 0.75rem;
+    animation: dashboard-skeleton-pulse 1.4s ease-in-out infinite;
+}
