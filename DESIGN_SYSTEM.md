@@ -29,6 +29,7 @@ The per-sub-app CSS approach keeps styles scoped to their route — no leakage, 
 | `/` | Portfolio | Light, warm, retro — gold & navy palette |
 | `/chat` | AI Chat | Clean light gradient — slate-to-blue, indigo accents |
 | `/real-time` | Real Time | Dark cinematic — deep navy, glassmorphism, indigo/violet |
+| `/dashboard` | Job Dashboard | Graphite dark, password-gated, never linked — see below |
 
 ---
 
@@ -86,6 +87,23 @@ The per-sub-app CSS approach keeps styles scoped to their route — no leakage, 
 | `/real-time/avatar` | LIVE**AVATAR** | Real-time AI video experience |
 | `/real-time/voice` | VOICE**AGENT** (violet) | Real-time AI voice conversation |
 | `/real-time/audio-test` | AUDIO**TEST** | Microphone configuration |
+
+### Job Dashboard (`/dashboard`)
+
+| Token | Value | Usage |
+|---|---|---|
+| Background | `#0b0e14` | Page background |
+| Surface / surface-2 | `#141821` / `#1b2130` | Cards, inputs |
+| Border | `#262d3d` | Card and input borders |
+| Text / muted | `#e6e9f0` / `#98a2b5` | Body text, secondary text |
+| Accent | `#5b9dff` | Buttons, active states, links |
+| Score bands | excellent `#ffd166` · good `#6ee7b7` · below `#9aa3b2` · flag `#c792ea` · drop `#ef6f6f` | Score badges, status chips |
+| Freshness | hot `#4ade80` · warm `#5b9dff` · stale `#6b7280` | Posting age chips |
+| Font | "Outfit" (same as Real Time), class-scoped via `.dashboard-scope` | |
+| Card radius | `rounded-2xl` (sheets/cards), `rounded-xl` (inputs/buttons) | |
+| Tap targets | 44px minimum | Mobile-first |
+
+Password-gated, `noindex`, disallowed in `robots.txt`, and not linked from anywhere on the site -- access is by typing the URL directly. Mobile: single-column cards, bottom sheets for filters/add, bottom nav. Desktop (>=1024px): two-pane list + detail, top bar instead of bottom nav. See `src/components/dashboard/` and `docs/job-dashboard-plan.md` (meta-repo) for the full design.
 
 ### Chat (`/chat`)
 
