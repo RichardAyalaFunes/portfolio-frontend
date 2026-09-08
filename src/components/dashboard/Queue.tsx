@@ -71,10 +71,12 @@ export function Queue({ refreshToken }: QueueProps) {
     const [activePresets, setActivePresets] = useState<string[]>(() => loadStoredPresets());
     const [presetMenuOpen, setPresetMenuOpen] = useState(false);
     const [activeGroups, setActiveGroups] = useState<string[]>([]);
+    const [groupMenuOpen, setGroupMenuOpen] = useState(false);
     const [filterSheetOpen, setFilterSheetOpen] = useState(false);
     const [drawerWidth, setDrawerWidth] = useState<number>(() => loadStoredDrawerWidth());
     const [resizingDrawer, setResizingDrawer] = useState(false);
     const presetMenuRef = useRef<HTMLDivElement>(null);
+    const groupMenuRef = useRef<HTMLDivElement>(null);
     const drawerRef = useRef<HTMLDivElement>(null);
     const dragOriginXRef = useRef(0);
 
@@ -88,6 +90,17 @@ export function Queue({ refreshToken }: QueueProps) {
         document.addEventListener('mousedown', handleOutsideClick);
         return () => document.removeEventListener('mousedown', handleOutsideClick);
     }, [presetMenuOpen]);
+
+    useEffect(() => {
+        if (!groupMenuOpen) return;
+        function handleOutsideClick(e: MouseEvent) {
+            if (groupMenuRef.current && !groupMenuRef.current.contains(e.target as Node)) {
+                setGroupMenuOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleOutsideClick);
+        return () => document.removeEventListener('mousedown', handleOutsideClick);
+    }, [groupMenuOpen]);
 
     function togglePreset(label: string) {
         setActivePresets((prev) => (prev.includes(label) ? prev.filter((p) => p !== label) : [...prev, label]));
@@ -304,24 +317,46 @@ export function Queue({ refreshToken }: QueueProps) {
                 )}
 
                 {groups.length > 0 && (
-                    <div className="flex gap-2 flex-wrap px-4 py-3" style={{ borderBottom: '1px solid var(--db-border)' }}>
-                        {groups.map((g) => {
-                            const active = activeGroups.includes(g);
-                            const count = (applications ?? []).filter((a) => a.group === g).length;
-                            return (
-                                <button
-                                    key={g}
-                                    onClick={() => toggleGroup(g)}
-                                    className="shrink-0 px-3 py-1.5 rounded-full text-xs whitespace-nowrap"
-                                    style={{
-                                        background: active ? 'var(--db-accent)' : 'var(--db-surface-2)',
-                                        color: active ? '#0b0e14' : 'var(--db-text)',
-                                    }}
-                                >
-                                    {formatGroupLabel(g)} · {count}
-                                </button>
-                            );
-                        })}
+                    <div className="relative px-4 py-3" style={{ borderBottom: '1px solid var(--db-border)' }} ref={groupMenuRef}>
+                        <button
+                            onClick={() => setGroupMenuOpen((v) => !v)}
+                            className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs"
+                            style={{ background: 'var(--db-surface-2)' }}
+                        >
+                            <span className="truncate text-left">
+                                {activeGroups.length === 0 ? 'All roles' : activeGroups.map(formatGroupLabel).join(', ')}
+                            </span>
+                            <ChevronDown
+                                size={14}
+                                className="shrink-0"
+                                style={{ transform: groupMenuOpen ? 'rotate(180deg)' : undefined, transition: 'transform 0.2s' }}
+                            />
+                        </button>
+
+                        {groupMenuOpen && (
+                            <div
+                                className="absolute left-4 right-4 top-full mt-1 z-20 rounded-xl overflow-hidden flex flex-col"
+                                style={{ background: 'var(--db-surface)', border: '1px solid var(--db-border)' }}
+                            >
+                                {groups.map((g, i) => {
+                                    const count = (applications ?? []).filter((a) => a.group === g).length;
+                                    const checked = activeGroups.includes(g);
+                                    return (
+                                        <label
+                                            key={g}
+                                            className="flex items-center gap-2.5 px-3 py-2.5 text-sm cursor-pointer"
+                                            style={i < groups.length - 1 ? { borderBottom: '1px solid var(--db-border)' } : undefined}
+                                        >
+                                            <input type="checkbox" checked={checked} onChange={() => toggleGroup(g)} />
+                                            <span className="flex-1">{formatGroupLabel(g)}</span>
+                                            <span className="text-xs" style={{ color: 'var(--db-muted)' }}>
+                                                {count}
+                                            </span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 )}
 
