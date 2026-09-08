@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { ExternalLink } from 'lucide-react';
 import type { JobApplication } from '../../api/dashboardApi';
 import { StatusChip } from './StatusChip';
+import { YcBadge } from './YcBadge';
 import { bandColorVar, freshnessColorVar, freshnessLabel } from './dashboardTokens';
 
 export function ApplicationCard({ application }: { application: JobApplication }) {
@@ -29,6 +30,7 @@ export function ApplicationCard({ application }: { application: JobApplication }
             </span>
             <div className="flex items-center gap-2 flex-wrap mt-0.5">
                 <StatusChip status={application.status} />
+                {application.source === 'ycombinator' && <YcBadge />}
                 <span className="text-xs" style={{ color: freshnessColorVar(application.posted_date) }}>
                     {freshnessLabel(application.posted_date)}
                 </span>

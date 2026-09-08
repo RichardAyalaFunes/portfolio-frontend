@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, MoreVertical, ChevronDown } from 'lucide-react';
 import { dashboardApi, type JobApplication } from '../../api/dashboardApi';
 import { StatusChip } from './StatusChip';
+import { YcBadge } from './YcBadge';
 
 const STATUSES = ['To validate', 'Approved', 'Rejected', 'Cold', 'Flagged', 'Dropped'];
 const STAGES = ['Not applied', 'Applied', 'Interviewing', 'Offer', 'Closed'];
@@ -159,6 +160,7 @@ export function ApplicationDetail() {
 
                 <div className="flex items-center gap-2 mt-3">
                     <StatusChip status={application.status} />
+                    {application.source === 'ycombinator' && <YcBadge />}
                     {application.score !== null && (
                         <span className="text-xs" style={{ color: 'var(--db-muted)' }}>
                             Score {application.score}

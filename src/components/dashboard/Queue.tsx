@@ -227,8 +227,8 @@ export function Queue({ refreshToken }: QueueProps) {
                             Nothing matches these filters.
                         </p>
                     )}
-                    {groupedSections.map(({ key, items }) => (
-                        <div key={key}>
+                    {groupedSections.map(({ key, items }, i) => (
+                        <div key={key} className={i > 0 ? 'mt-6' : undefined}>
                             <FreshnessHeader label={key} />
                             {items.map((app) => (
                                 <ApplicationCard key={app.id} application={app} />
