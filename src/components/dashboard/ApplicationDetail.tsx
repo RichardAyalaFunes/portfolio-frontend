@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, MoreVertical, ChevronDown } from 'lucide-react';
 import { dashboardApi, type JobApplication } from '../../api/dashboardApi';
 import { StatusChip } from './StatusChip';
+import { YcBadge } from './YcBadge';
 
 const STATUSES = ['To validate', 'Approved', 'Rejected', 'Cold', 'Flagged', 'Dropped'];
 const STAGES = ['Not applied', 'Applied', 'Interviewing', 'Offer', 'Closed'];
@@ -69,13 +70,37 @@ export function ApplicationDetail() {
         );
     }
 
-    const dirty = notes !== application.notes || status !== application.status || stage !== application.application_stage;
+    const dirty = notes !== application.notes;
 
     async function handleSave() {
         if (!applicationId) return;
         setSaving(true);
         try {
-            const updated = await dashboardApi.updateApplication(applicationId, { notes, status, stage });
+            const updated = await dashboardApi.updateApplication(applicationId, { notes });
+            setApplication(updated);
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function handleStatusChange(nextStatus: string) {
+        setStatus(nextStatus);
+        if (!applicationId) return;
+        setSaving(true);
+        try {
+            const updated = await dashboardApi.updateApplication(applicationId, { status: nextStatus });
+            setApplication(updated);
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function handleStageChange(nextStage: string) {
+        setStage(nextStage);
+        if (!applicationId) return;
+        setSaving(true);
+        try {
+            const updated = await dashboardApi.updateApplication(applicationId, { stage: nextStage });
             setApplication(updated);
         } finally {
             setSaving(false);
@@ -135,6 +160,7 @@ export function ApplicationDetail() {
 
                 <div className="flex items-center gap-2 mt-3">
                     <StatusChip status={application.status} />
+                    {application.source === 'ycombinator' && <YcBadge />}
                     {application.score !== null && (
                         <span className="text-xs" style={{ color: 'var(--db-muted)' }}>
                             Score {application.score}
@@ -210,14 +236,24 @@ export function ApplicationDetail() {
                 style={{ background: 'var(--db-surface)', borderTop: '1px solid var(--db-border)' }}
             >
                 <div className="flex gap-2">
-                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="flex-1 px-3 py-2.5 rounded-xl text-sm">
+                    <select
+                        value={status}
+                        onChange={(e) => handleStatusChange(e.target.value)}
+                        disabled={saving}
+                        className="flex-1 px-3 py-2.5 rounded-xl text-sm"
+                    >
                         {STATUSES.map((s) => (
                             <option key={s} value={s}>
                                 {s}
                             </option>
                         ))}
                     </select>
-                    <select value={stage} onChange={(e) => setStage(e.target.value)} className="flex-1 px-3 py-2.5 rounded-xl text-sm">
+                    <select
+                        value={stage}
+                        onChange={(e) => handleStageChange(e.target.value)}
+                        disabled={saving}
+                        className="flex-1 px-3 py-2.5 rounded-xl text-sm"
+                    >
                         {STAGES.map((s) => (
                             <option key={s} value={s}>
                                 {s}
@@ -231,7 +267,7 @@ export function ApplicationDetail() {
                     className="w-full py-2.5 rounded-xl font-medium disabled:opacity-40"
                     style={{ background: 'var(--db-accent)', color: '#0b0e14' }}
                 >
-                    {saving ? 'Saving…' : 'Save'}
+                    {saving ? 'Saving…' : 'Save notes'}
                 </button>
             </div>
 

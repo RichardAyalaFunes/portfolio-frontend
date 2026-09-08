@@ -21,6 +21,8 @@
     --db-fresh-warm: #5b9dff;
     --db-fresh-stale: #6b7280;
 
+    --db-yc: #ff7a1a;
+
     font-family: 'Outfit', system-ui, -apple-system, sans-serif;
     background: var(--db-bg);
     color: var(--db-text);
