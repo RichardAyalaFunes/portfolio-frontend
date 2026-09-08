@@ -1,7 +1,6 @@
 import type { SearchRun } from '../../api/dashboardApi';
 
 export interface Filters {
-    group?: string;
     source?: string;
     live?: string;
     run?: string;
@@ -10,7 +9,6 @@ export interface Filters {
 
 interface FilterSheetProps {
     filters: Filters;
-    groups: string[];
     sources: string[];
     runs: SearchRun[];
     onApply: (filters: Filters) => void;
@@ -23,7 +21,7 @@ const SORT_OPTIONS = [
     { value: 'score.desc', label: 'Highest score' },
 ];
 
-export function FilterSheet({ filters, groups, sources, runs, onApply, onClose }: FilterSheetProps) {
+export function FilterSheet({ filters, sources, runs, onApply, onClose }: FilterSheetProps) {
     function update(patch: Partial<Filters>) {
         onApply({ ...filters, ...patch });
     }
@@ -42,12 +40,6 @@ export function FilterSheet({ filters, groups, sources, runs, onApply, onClose }
                     </button>
                 </div>
 
-                <FilterSelect
-                    label="Group"
-                    value={filters.group}
-                    options={groups}
-                    onChange={(v) => update({ group: v })}
-                />
                 <FilterSelect
                     label="Source"
                     value={filters.source}

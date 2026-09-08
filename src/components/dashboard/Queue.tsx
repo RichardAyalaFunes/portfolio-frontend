@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react';
 import { Outlet, useParams } from 'react-router-dom';
 import { Search, SlidersHorizontal, ChevronDown, X } from 'lucide-react';
 import { dashboardApi, type JobApplication, type SearchRun } from '../../api/dashboardApi';
@@ -8,6 +8,12 @@ import { FilterSheet, type Filters } from './FilterSheet';
 import { freshnessGroup } from './dashboardTokens';
 
 const FRESHNESS_ORDER = ['Last 2 days', '3 to 7 days', '8 to 30 days', 'Older', 'Undated'];
+
+const PRESETS_STORAGE_KEY = 'dashboard_active_presets';
+const DRAWER_WIDTH_STORAGE_KEY = 'dashboard_drawer_width';
+const DEFAULT_DRAWER_WIDTH = 400;
+const MIN_DRAWER_WIDTH = 280;
+const MAX_DRAWER_WIDTH = 640;
 
 interface SummaryChip {
     label: string;
@@ -22,6 +28,33 @@ const SUMMARY_CHIPS: SummaryChip[] = [
     { label: 'Passing', match: (a) => ['Rejected', 'Cold', 'Dropped'].includes(a.status) },
 ];
 
+function loadStoredPresets(): string[] {
+    try {
+        const raw = localStorage.getItem(PRESETS_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : null;
+        return Array.isArray(parsed) ? parsed : ['To apply'];
+    } catch {
+        return ['To apply'];
+    }
+}
+
+function loadStoredDrawerWidth(): number {
+    try {
+        const raw = Number(localStorage.getItem(DRAWER_WIDTH_STORAGE_KEY));
+        if (!Number.isFinite(raw)) return DEFAULT_DRAWER_WIDTH;
+        return Math.min(MAX_DRAWER_WIDTH, Math.max(MIN_DRAWER_WIDTH, raw));
+    } catch {
+        return DEFAULT_DRAWER_WIDTH;
+    }
+}
+
+function formatGroupLabel(group: string): string {
+    return group
+        .split('_')
+        .map((word) => (word.toLowerCase() === 'ai' ? 'AI' : word.charAt(0).toUpperCase() + word.slice(1)))
+        .join(' ');
+}
+
 interface QueueProps {
     refreshToken: number;
 }
@@ -35,10 +68,15 @@ export function Queue({ refreshToken }: QueueProps) {
     const [error, setError] = useState(false);
     const [search, setSearch] = useState('');
     const [filters, setFilters] = useState<Filters>({ sort: 'posted_date.desc' });
-    const [activePresets, setActivePresets] = useState<string[]>(['To apply']);
+    const [activePresets, setActivePresets] = useState<string[]>(() => loadStoredPresets());
     const [presetMenuOpen, setPresetMenuOpen] = useState(false);
+    const [activeGroups, setActiveGroups] = useState<string[]>([]);
     const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+    const [drawerWidth, setDrawerWidth] = useState<number>(() => loadStoredDrawerWidth());
+    const [resizingDrawer, setResizingDrawer] = useState(false);
     const presetMenuRef = useRef<HTMLDivElement>(null);
+    const drawerRef = useRef<HTMLDivElement>(null);
+    const dragOriginXRef = useRef(0);
 
     useEffect(() => {
         if (!presetMenuOpen) return;
@@ -54,6 +92,53 @@ export function Queue({ refreshToken }: QueueProps) {
     function togglePreset(label: string) {
         setActivePresets((prev) => (prev.includes(label) ? prev.filter((p) => p !== label) : [...prev, label]));
     }
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(activePresets));
+        } catch {
+            // localStorage unavailable (private browsing, quota) -- selection just won't persist.
+        }
+    }, [activePresets]);
+
+    function toggleGroup(group: string) {
+        setActiveGroups((prev) => (prev.includes(group) ? prev.filter((g) => g !== group) : [...prev, group]));
+    }
+
+    function startDrawerResize(e: ReactMouseEvent) {
+        e.preventDefault();
+        dragOriginXRef.current = drawerRef.current?.getBoundingClientRect().left ?? 0;
+        setResizingDrawer(true);
+    }
+
+    useEffect(() => {
+        if (!resizingDrawer) return;
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'col-resize';
+        function handleMouseMove(e: MouseEvent) {
+            const next = e.clientX - dragOriginXRef.current;
+            setDrawerWidth(Math.min(MAX_DRAWER_WIDTH, Math.max(MIN_DRAWER_WIDTH, next)));
+        }
+        function handleMouseUp() {
+            setResizingDrawer(false);
+        }
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        return () => {
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [resizingDrawer]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(DRAWER_WIDTH_STORAGE_KEY, String(drawerWidth));
+        } catch {
+            // localStorage unavailable -- width just won't persist.
+        }
+    }, [drawerWidth]);
 
     useEffect(() => {
         setError(false);
@@ -79,7 +164,7 @@ export function Queue({ refreshToken }: QueueProps) {
             list = list.filter((a) => activeMatchers.some((c) => c.match(a)));
         }
 
-        if (filters.group) list = list.filter((a) => a.group === filters.group);
+        if (activeGroups.length > 0) list = list.filter((a) => a.group && activeGroups.includes(a.group));
         if (filters.source) list = list.filter((a) => a.source === filters.source);
         if (filters.run) list = list.filter((a) => a.run_date === filters.run);
 
@@ -99,7 +184,7 @@ export function Queue({ refreshToken }: QueueProps) {
             });
         }
         return sorted;
-    }, [applications, search, filters, activePresets]);
+    }, [applications, search, filters, activePresets, activeGroups]);
 
     const groupedSections = useMemo(() => {
         const buckets = new Map<string, JobApplication[]>();
@@ -115,7 +200,16 @@ export function Queue({ refreshToken }: QueueProps) {
 
     return (
         <div className="lg:flex lg:h-full">
-            <div className={`${hasDetail ? 'hidden lg:flex' : 'flex'} lg:flex-col flex-col lg:w-[400px] lg:shrink-0`} style={{ borderRight: '1px solid var(--db-border)' }}>
+            <div
+                ref={drawerRef}
+                className={`${hasDetail ? 'hidden lg:flex' : 'flex'} lg:flex-col flex-col lg:w-[var(--db-drawer-w)] lg:shrink-0 relative`}
+                style={{ borderRight: '1px solid var(--db-border)', '--db-drawer-w': `${drawerWidth}px` } as CSSProperties}
+            >
+                <div
+                    onMouseDown={startDrawerResize}
+                    className="hidden lg:block absolute top-0 right-0 h-full w-1.5 cursor-col-resize z-30"
+                    style={{ background: resizingDrawer ? 'var(--db-accent)' : 'transparent' }}
+                />
                 <div className="relative px-4 py-3" style={{ borderBottom: '1px solid var(--db-border)' }} ref={presetMenuRef}>
                     <button
                         onClick={() => setPresetMenuOpen((v) => !v)}
@@ -209,6 +303,28 @@ export function Queue({ refreshToken }: QueueProps) {
                     </div>
                 )}
 
+                {groups.length > 0 && (
+                    <div className="flex gap-2 flex-wrap px-4 py-3" style={{ borderBottom: '1px solid var(--db-border)' }}>
+                        {groups.map((g) => {
+                            const active = activeGroups.includes(g);
+                            const count = (applications ?? []).filter((a) => a.group === g).length;
+                            return (
+                                <button
+                                    key={g}
+                                    onClick={() => toggleGroup(g)}
+                                    className="shrink-0 px-3 py-1.5 rounded-full text-xs whitespace-nowrap"
+                                    style={{
+                                        background: active ? 'var(--db-accent)' : 'var(--db-surface-2)',
+                                        color: active ? '#0b0e14' : 'var(--db-text)',
+                                    }}
+                                >
+                                    {formatGroupLabel(g)} · {count}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+
                 <div className="flex-1 overflow-y-auto">
                     {error && (
                         <p className="p-4 text-sm" style={{ color: 'var(--db-band-drop)' }}>
@@ -249,7 +365,6 @@ export function Queue({ refreshToken }: QueueProps) {
             {filterSheetOpen && (
                 <FilterSheet
                     filters={filters}
-                    groups={groups}
                     sources={sources}
                     runs={runs}
                     onApply={setFilters}
