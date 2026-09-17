@@ -6,6 +6,7 @@ import { StatusChip } from './StatusChip';
 import { YcBadge } from './YcBadge';
 import { ContactList } from './ContactList';
 import { RoleFormSection } from './RoleFormSection';
+import { RoleTags } from './RoleTags';
 
 const ENRICHMENT_SCORE_THRESHOLD = 80;
 
@@ -172,6 +173,12 @@ export function ApplicationDetail() {
                     )}
                 </div>
 
+                {application.tags?.length > 0 && (
+                    <div className="mt-2">
+                        <RoleTags tags={application.tags} />
+                    </div>
+                )}
+
                 {application.jd_url && (
                     <a
                         href={application.jd_url}
@@ -189,7 +196,8 @@ export function ApplicationDetail() {
                     <Fact label="Work mode" value={application.work_mode} />
                     <Fact label="Type" value={application.employment_type} />
                     <Fact label="Salary" value={application.salary_text} />
-                    <Fact label="Group" value={application.group} />
+                    <Fact label="Lane" value={application.group} />
+                    <Fact label="Also fits" value={application.secondary_lanes?.join(', ') || null} />
                     <Fact label="Source" value={application.source} />
                 </div>
 
@@ -233,6 +241,7 @@ export function ApplicationDetail() {
                     <CollapsibleSection title="Considerations" text={application.considerations} />
                     <CollapsibleSection title="Eligibility" text={application.eligibility_text} />
                     <CollapsibleSection title="Requirements" text={application.requirements_excerpt} />
+                    <CollapsibleSection title="Found by search lines" text={application.discovery_queries?.join('\n') || null} />
                 </div>
 
                 <div className="mt-5">

@@ -145,6 +145,14 @@ export interface JobApplication {
     postings: Array<{ id: string; url: string | null; source: string | null }>;
     contacts: RoleContact[];
     application_form: RoleApplicationForm | Record<string, never>;
+    /** Other interest groups this role also serves; the primary lane is `group`. */
+    secondary_lanes: string[];
+    /** Every search line that surfaced this role (drives the agent's per-line yield). */
+    discovery_queries: string[];
+    /** Agent review warnings, e.g. location_unsure, big_corporate (see RoleTags). */
+    tags: string[];
+    /** Last time Richard changed status, stage or notes; the agent reads it as feedback. */
+    reviewed_at: string | null;
     archived_at: string | null;
     created_at: string | null;
     updated_at: string | null;
