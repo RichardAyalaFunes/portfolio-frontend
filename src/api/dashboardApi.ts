@@ -71,6 +71,47 @@ async function request<TResponse>(
 
 // ── Types (mirrors backend/infrastructure/adapters/driver/rest/dashboard_controller.py) ──
 
+/**
+ * Outreach candidate for a role scoring >=80. Deliberately a loose shape, not a
+ * strict union — see profile/job-search/dashboard/enrich.js for what the agent
+ * actually writes. `outreach_stage` is the one field Richard owns from the UI;
+ * everything else is written once by the enrichment step and left alone after.
+ */
+export interface RoleContact {
+    id: string;
+    name: string;
+    title: string | null;
+    linkedin_url: string | null;
+    linkedin_slug: string | null;
+    connection_degree: string | null;
+    mutual_connections: number | null;
+    category: string | null;
+    priority_rank: number | null;
+    reason: string | null;
+    message_draft: string | null;
+    outreach_stage: 'not_contacted' | 'sent' | 'replied' | string;
+    outreach_stage_updated_at: string | null;
+    source: string | null;
+    found_at: string | null;
+}
+
+export interface ApplicationFormQuestion {
+    question: string;
+    required: boolean;
+    field_type: string | null;
+    classification: 'trivial' | 'substantive' | string;
+    answer_bullets: string[] | null;
+    answer_draft: string | null;
+}
+
+export interface RoleApplicationForm {
+    apply_type: string | null;
+    apply_url: string | null;
+    checked_at: string | null;
+    skipped_reason: string | null;
+    questions: ApplicationFormQuestion[];
+}
+
 export interface JobApplication {
     id: string;
     legacy_id: string | null;
@@ -102,6 +143,8 @@ export interface JobApplication {
     work_remote_allowed: boolean | null;
     notes: string;
     postings: Array<{ id: string; url: string | null; source: string | null }>;
+    contacts: RoleContact[];
+    application_form: RoleApplicationForm | Record<string, never>;
     archived_at: string | null;
     created_at: string | null;
     updated_at: string | null;
@@ -192,6 +235,16 @@ export const dashboardApi = {
 
     async archiveApplication(id: string): Promise<void> {
         await request('DELETE', `/applications/${id}`);
+    },
+
+    async updateContactStage(
+        applicationId: string,
+        contactId: string,
+        stage: string,
+    ): Promise<JobApplication> {
+        return request<JobApplication>('PATCH', `/applications/${applicationId}/contacts/${contactId}`, {
+            stage,
+        });
     },
 
     async getMetrics(scope: string = 'all'): Promise<MetricsResponse> {

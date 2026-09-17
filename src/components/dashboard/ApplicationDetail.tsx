@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, MoreVertical, ChevronDown } from 'lucide-react';
-import { dashboardApi, type JobApplication } from '../../api/dashboardApi';
+import { dashboardApi, type JobApplication, type RoleContact } from '../../api/dashboardApi';
 import { StatusChip } from './StatusChip';
 import { YcBadge } from './YcBadge';
+import { ContactList } from './ContactList';
+import { RoleFormSection } from './RoleFormSection';
+
+const ENRICHMENT_SCORE_THRESHOLD = 80;
 
 const STATUSES = ['To validate', 'Approved', 'Rejected', 'Cold', 'Flagged', 'Dropped'];
 const STAGES = ['Not applied', 'Applied', 'Interviewing', 'Offer', 'Closed'];
@@ -210,6 +214,19 @@ export function ApplicationDetail() {
                         </p>
                         <p style={{ color: 'var(--db-text)' }}>{application.why_not}</p>
                     </div>
+                )}
+
+                {application.score !== null && application.score >= ENRICHMENT_SCORE_THRESHOLD && (
+                    <>
+                        <ContactList
+                            applicationId={application.id}
+                            contacts={application.contacts}
+                            onUpdated={(contacts: RoleContact[]) =>
+                                setApplication((prev) => (prev ? { ...prev, contacts } : prev))
+                            }
+                        />
+                        <RoleFormSection form={application.application_form} />
+                    </>
                 )}
 
                 <div className="mt-2">
