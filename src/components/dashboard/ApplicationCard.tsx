@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { ExternalLink } from 'lucide-react';
 import type { JobApplication } from '../../api/dashboardApi';
+import { RoleTags } from './RoleTags';
 import { StatusChip } from './StatusChip';
 import { YcBadge } from './YcBadge';
 import { bandColorVar, freshnessColorVar, freshnessLabel } from './dashboardTokens';
@@ -48,6 +49,7 @@ export function ApplicationCard({ application }: { application: JobApplication }
                     </a>
                 )}
             </div>
+            <RoleTags tags={application.tags} />
             {(application.location_text || application.work_mode) && (
                 <span className="text-xs" style={{ color: 'var(--db-muted)' }}>
                     {[application.location_text, application.work_mode].filter(Boolean).join(' · ')}
