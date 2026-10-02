@@ -50,6 +50,29 @@ function Chip({ children, color }: { children: ReactNode; color?: string }) {
     );
 }
 
+/** A long paragraph shown in four lines with a toggle, so a lane's thesis does not push its rules off the screen. */
+function ClampedText({ text }: { text: string }) {
+    const [open, setOpen] = useState(false);
+    const long = text.length > 320;
+    return (
+        <div className="mt-3">
+            <p className={`text-sm ${long && !open ? 'line-clamp-4' : ''}`} style={{ color: 'var(--db-text)' }}>
+                {text}
+            </p>
+            {long && (
+                <button
+                    type="button"
+                    onClick={() => setOpen((v) => !v)}
+                    className="text-xs mt-1"
+                    style={{ color: 'var(--db-accent)', minHeight: 0 }}
+                >
+                    {open ? 'Show less' : 'Read the whole thesis'}
+                </button>
+            )}
+        </div>
+    );
+}
+
 // ── Score thresholds ─────────────────────────────────────────────────────────
 
 function Thresholds({ doc }: { doc: RulesDocument }) {
@@ -396,11 +419,7 @@ function LanePanel({ doc, lane, response }: { doc: RulesDocument; lane: RulesLan
                         {stats.applied} applied
                     </p>
                 )}
-                {lane.thesis && (
-                    <p className="text-sm mt-3" style={{ color: 'var(--db-text)' }}>
-                        {lane.thesis}
-                    </p>
-                )}
+                {lane.thesis && <ClampedText text={lane.thesis} />}
                 {lane.looks_for && (
                     <p className="text-[13px] mt-3">
                         <span style={{ color: 'var(--db-muted)' }}>Looks for: </span>
