@@ -5,6 +5,7 @@ import type { JobApplication } from '../../api/dashboardApi';
 import { BucketChip } from './BucketChip';
 import { RoleTags } from './RoleTags';
 import { YcBadge } from './YcBadge';
+import { cardMeta } from './cardText';
 import { bandColorVar, freshnessColorVar, freshnessShort } from './dashboardTokens';
 import { bucketOf, dropReasonLabel, laneShort, statusLabel } from './queueBuckets';
 import { hasSkillMatch } from './skillMatchModel';
@@ -19,16 +20,6 @@ interface ApplicationCardProps {
 
 const TRACKING_BUCKETS = ['applied', 'interviewing', 'offer', 'closed'];
 const SET_ASIDE_STATUSES = ['Rejected', 'Cold', 'Dropped'];
-
-/** "Remote" twice reads as noise: skip the work mode when the location already says it. */
-function metaLine(application: JobApplication): string {
-    const location = application.location_text;
-    const workMode = application.work_mode;
-    const showWorkMode = workMode && !(location && location.toLowerCase().includes(workMode.toLowerCase()));
-    return [application.company, showWorkMode ? workMode : null, location, application.salary_text]
-        .filter(Boolean)
-        .join(' · ');
-}
 
 /**
  * One role in the queue, in three rows: what and how well it scores, who and where,
@@ -87,7 +78,7 @@ export function ApplicationCard({ application, selected = false, showBucket = tr
 
             <div className="flex items-center justify-between gap-2">
                 <span className="text-[13px] truncate" style={{ color: 'var(--db-muted)' }}>
-                    {metaLine(application)}
+                    {cardMeta(application)}
                 </span>
                 <span className="flex items-center gap-2 shrink-0">
                     <span className="text-xs" style={{ color: freshnessColorVar(application.posted_date) }}>
