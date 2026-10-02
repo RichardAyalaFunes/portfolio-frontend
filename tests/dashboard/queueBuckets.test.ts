@@ -159,6 +159,50 @@ describe('bucketOf: dropped roles', () => {
     });
 });
 
+describe('invariants over every combination', () => {
+    const statuses = ['To validate', 'Approved', 'Rejected', 'Cold', 'Flagged', 'Dropped'];
+    const stages = ['Not applied', 'Applied', 'Interviewing', 'Offer', 'Closed'];
+    const liveStates = ['LISTED', 'CLOSED', 'SUSPENDED', 'GONE', 'UNVERIFIABLE', null];
+    const drops: Array<[string | null, string | null]> = [[null, null], ['read', 'eligibility_geo'], ['scored', 'below_bar']];
+    const reviewBuckets: BucketId[] = ['to_review', 'flagged', 'to_apply', 'no_longer_open'];
+
+    const everything = statuses.flatMap((status) =>
+        stages.flatMap((application_stage) =>
+            liveStates.flatMap((live_state) =>
+                drops.map(([drop_stage, drop_reason]) => app({ status, application_stage, live_state, drop_stage, drop_reason })),
+            ),
+        ),
+    );
+
+    it('puts every role in exactly one known bucket', () => {
+        assert.equal(everything.length, 6 * 5 * 6 * 3);
+        for (const role of everything) {
+            const bucket = bucketOf(role);
+            assert.ok(bucket in BUCKET_BY_ID, `${role.status}/${role.application_stage}/${role.live_state} -> ${bucket}`);
+        }
+    });
+
+    it('never lists a role with an application stage in a bucket that waits on a decision', () => {
+        for (const role of everything.filter((r) => r.application_stage !== 'Not applied')) {
+            assert.ok(!reviewBuckets.includes(bucketOf(role)), `${role.status}/${role.application_stage}`);
+        }
+    });
+
+    it('lists a role under To review only when it is undecided, not applied and its posting is not dead', () => {
+        for (const role of everything) {
+            const inReview = bucketOf(role) === 'to_review';
+            const expected = role.status === 'To validate' && role.application_stage === 'Not applied' && !isPostingDead(role);
+            assert.equal(inReview, expected, `${role.status}/${role.application_stage}/${role.live_state}`);
+        }
+    });
+
+    it('never offers an action on a dead posting: To apply and Flagged exclude closed, suspended and gone', () => {
+        for (const role of everything.filter((r) => isPostingDead(r))) {
+            assert.ok(!['to_review', 'flagged', 'to_apply'].includes(bucketOf(role)), `${role.status}/${role.live_state}`);
+        }
+    });
+});
+
 describe('bucket catalogue', () => {
     it('has exactly one definition per bucket and a default that exists', () => {
         const ids = BUCKETS.map((b) => b.id);
