@@ -53,7 +53,7 @@ export function Metrics() {
                     <div className="grid grid-cols-2 gap-3">
                         <StatTile label="Total tracked" value={metrics.total} />
                         <StatTile label="Approved" value={metrics.status_counts['Approved'] ?? 0} color="var(--db-band-good)" />
-                        <StatTile label="To validate" value={metrics.status_counts['To validate'] ?? 0} />
+                        <StatTile label="To review" value={metrics.status_counts['To validate'] ?? 0} />
                         <StatTile label="Applied" value={metrics.stage_counts['Applied'] ?? 0} color="var(--db-accent)" />
                     </div>
 

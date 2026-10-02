@@ -5,6 +5,7 @@ import { Gate } from './Gate';
 import { Queue } from './Queue';
 import { ApplicationDetail } from './ApplicationDetail';
 import { Metrics } from './Metrics';
+import { Rules } from './Rules';
 import { BottomNav } from './BottomNav';
 import { AddSheet } from './AddSheet';
 import '../../styles/dashboard.css';
@@ -76,6 +77,7 @@ export default function DashboardLayout() {
                         <Route path=":applicationId" element={<ApplicationDetail />} />
                     </Route>
                     <Route path="/metrics" element={<Metrics />} />
+                    <Route path="/rules" element={<Rules />} />
                 </Routes>
             </div>
             <BottomNav onSignOut={handleSignOut} onAddClick={() => setAddSheetOpen(true)} />
