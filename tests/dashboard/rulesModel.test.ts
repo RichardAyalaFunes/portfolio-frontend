@@ -81,3 +81,90 @@ describe('normalizeRulesDocument', () => {
         assert.deepEqual(doc.gates[0].details, []);
     });
 });
+
+describe('normalizeRulesDocument: a document of the wrong shape', () => {
+    // The server only checks that lanes have an id, a label and a list of lines, so everything else can arrive
+    // as anything. The Rules screen has to render whatever is left without throwing: an exception there blanks the dashboard.
+    it('survives input that is not an object at all', () => {
+        for (const junk of [null, undefined, 'text', 42, true, []]) {
+            const doc = normalizeRulesDocument(junk);
+            assert.deepEqual(doc.lanes, []);
+            assert.deepEqual(doc.gates, []);
+            assert.equal(doc.thresholds.pass_bar, 75);
+            assert.deepEqual(doc.thresholds.second_opinion_band, [65, 74]);
+        }
+    });
+
+    it('leaves out entries of the wrong shape and keeps the good ones next to them', () => {
+        const doc = normalizeRulesDocument({
+            lanes: [
+                null,
+                'text',
+                7,
+                [],
+                { label: 'no id' },
+                {
+                    id: 'ai_engineer',
+                    label: 'AI Engineer',
+                    lines: [null, 'x', { line: 'good line', status: 'standing', portal: 'linkedin' }, { portal: 'no line text' }],
+                    rubric: [null, { dimension: 'Skills', weight: '25' }, { dimension: 'Tech', weight: 40 }, { weight: 5 }],
+                    rules: [null, { title: 'T', kind: 'keep' }, { title: 'U', kind: 'drop', items: 'not a list' }, { title: 'V', items: ['a', 1, 'b'] }],
+                    title_synonyms: 'not a list',
+                },
+            ],
+            gates: [null, { id: 'g1', details: 'text', drop_reasons: [1, 'a'], lane_notes: { ai_engineer: 'note', fde: 3 } }],
+            review_tags: [null, { when: 'no id' }, { id: 't' }],
+            scope: { anchors: [null, { label: 'Peru' }, { id: 'x' }], portals: [{ id: 'linkedin', tier: 'x' }, { tier: 1 }], never: ['a', 2] },
+            deal_breakers: 'not a list',
+            blocklists: { companies: ['Acme', null, 3] },
+        });
+
+        assert.deepEqual(doc.lanes.map((l) => l.id), ['ai_engineer']);
+        const lane = doc.lanes[0];
+        assert.deepEqual(lane.lines.map((l) => [l.line, l.status, l.portal]), [['good line', 'standing', 'linkedin']]);
+        assert.deepEqual(lane.rubric, [{ dimension: 'Skills', weight: 0 }, { dimension: 'Tech', weight: 40 }]);
+        assert.deepEqual(lane.rules, [
+            { title: 'T', kind: 'keep', items: [] },
+            { title: 'U', kind: 'drop', items: [] },
+            { title: 'V', kind: 'note', items: ['a', 'b'] },
+        ]);
+        assert.deepEqual(lane.title_synonyms, []);
+        assert.deepEqual(doc.gates.map((g) => [g.id, g.details, g.drop_reasons, g.lane_notes]), [
+            ['g1', [], ['a'], { ai_engineer: 'note' }],
+        ]);
+        assert.deepEqual(doc.review_tags, [{ id: 't', when: '', effect: '' }]);
+        assert.deepEqual(doc.scope.anchors, [{ id: 'Peru', label: 'Peru' }, { id: 'x', label: 'x' }]);
+        assert.deepEqual(doc.scope.portals, [{ id: 'linkedin', tier: 99, label: 'linkedin' }]);
+        assert.deepEqual(doc.scope.never, ['a']);
+        assert.deepEqual(doc.deal_breakers, []);
+        assert.deepEqual(doc.blocklists.companies, ['Acme']);
+    });
+
+    it('gives every lane, gate and line what the screen reads, so rendering cannot throw', () => {
+        const doc = normalizeRulesDocument({
+            lanes: [{ id: 'a', lines: [{ line: 'x' }], rubric: [{ dimension: 'd' }], rules: [{}] }],
+            gates: [{}],
+        });
+        const lane = doc.lanes[0];
+        assert.equal(lane.label, 'a');
+        assert.equal(lane.order, 1);
+        assert.deepEqual(groupLines(lane.lines).map((g) => g.status), ['unknown']);
+        assert.equal(rubricTotal(lane.rubric), 0);
+        assert.deepEqual(lane.rules[0], { title: '', kind: 'note', items: [] });
+        assert.equal(doc.gates[0].details.length, 0);
+        assert.equal(doc.thresholds.second_opinion_band.length, 2);
+    });
+
+    it('takes a numeric salary target and ignores a band that is not two numbers', () => {
+        const doc = normalizeRulesDocument({ thresholds: { salary_target_usd_month: 6000, second_opinion_band: [70, 'x'] } });
+        assert.equal(doc.thresholds.salary_target_usd_month, '6000');
+        assert.deepEqual(doc.thresholds.second_opinion_band, [65, 74]);
+    });
+});
+
+describe('laneTabLabel on inherited keys', () => {
+    it('falls back to the label instead of an Object property', () => {
+        assert.equal(laneTabLabel('constructor', 'Constructor lane'), 'Constructor lane');
+        assert.equal(laneTabLabel('__proto__', 'Proto lane'), 'Proto lane');
+    });
+});

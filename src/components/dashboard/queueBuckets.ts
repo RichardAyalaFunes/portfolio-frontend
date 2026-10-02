@@ -11,6 +11,12 @@
  *     status says. That is what keeps an applied role out of "To review".
  *   - A role still waiting on him (To review / Flagged / To apply) whose posting
  *     has closed moves to "No longer open": he cannot act on it any more.
+ *   - A role the agent scored under the pass bar is "Didn't pass", not "To review",
+ *     even if it was stored with the default To validate status. His own verdicts
+ *     (Approved, Rejected) and the agent's explicit Flagged are kept as they are.
+ *
+ * The backend counts "To review" with the same rule (JobApplication.awaits_review) for
+ * the Metrics tile and the Rules page, so keep the two in step.
  *
  * This file is dependency-free on purpose (type imports only) and the relative
  * imports in the dashboard's pure modules carry an explicit `.ts` extension, so
@@ -73,7 +79,8 @@ export const BUCKET_BY_ID = Object.fromEntries(BUCKETS.map((b) => [b.id, b])) as
 export const DEFAULT_BUCKETS: ReadonlyArray<BucketId> = ['to_review'];
 
 export function isBucketId(value: unknown): value is BucketId {
-    return typeof value === 'string' && value in BUCKET_BY_ID;
+    // Own keys only: `in` would accept 'toString' or '__proto__' from a corrupted saved preference.
+    return typeof value === 'string' && Object.hasOwn(BUCKET_BY_ID, value);
 }
 
 // ── Classification ───────────────────────────────────────────────────────────
@@ -118,7 +125,9 @@ export function bucketOf(app: BucketInput): BucketId {
         case 'Flagged':
             return isPostingDead(app) ? 'no_longer_open' : 'flagged';
         default:
-            // 'To validate', and anything unknown: show it rather than hide it.
+            // 'To validate', and anything unknown: show it rather than hide it. One the agent scored
+            // under the bar never was a candidate, whatever status it was stored with.
+            if (isBelowBar(app)) return 'didnt_pass';
             return isPostingDead(app) ? 'no_longer_open' : 'to_review';
     }
 }
@@ -160,7 +169,7 @@ const DROP_REASON_LABELS: Record<string, string> = {
 
 export function dropReasonLabel(code: string | null): string | null {
     if (!code) return null;
-    if (DROP_REASON_LABELS[code]) return DROP_REASON_LABELS[code];
+    if (Object.hasOwn(DROP_REASON_LABELS, code)) return DROP_REASON_LABELS[code];
     const spaced = code.replace(/_/g, ' ');
     return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
@@ -178,7 +187,7 @@ const LANE_SHORT: Record<string, string> = {
 };
 
 export function laneLabel(lane: string): string {
-    if (LANE_LABELS[lane]) return LANE_LABELS[lane];
+    if (Object.hasOwn(LANE_LABELS, lane)) return LANE_LABELS[lane];
     return lane
         .split('_')
         .map((word) => (word.toLowerCase() === 'ai' ? 'AI' : word.charAt(0).toUpperCase() + word.slice(1)))
@@ -186,7 +195,7 @@ export function laneLabel(lane: string): string {
 }
 
 export function laneShort(lane: string): string {
-    return LANE_SHORT[lane] ?? laneLabel(lane);
+    return Object.hasOwn(LANE_SHORT, lane) ? LANE_SHORT[lane] : laneLabel(lane);
 }
 
 // ── Filtering, counting, sorting ────────────────────────────────────────────

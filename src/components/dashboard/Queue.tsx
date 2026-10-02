@@ -22,30 +22,13 @@ import {
     sortApplications,
     type QueueFilter,
 } from './queueBuckets';
+import { clampDrawerWidth, loadDrawerWidth, saveDrawerWidth } from './drawerWidth';
 import { loadQueuePrefs, saveQueuePrefs, type QueuePrefs } from './queuePrefs';
 import { useApplications } from './useApplications';
 
 const FRESHNESS_ORDER = ['Last 2 days', '3 to 7 days', '8 to 30 days', 'Older', 'Undated'];
 
-const DRAWER_WIDTH_STORAGE_KEY = 'dashboard_drawer_width';
-const DEFAULT_DRAWER_WIDTH = 400;
-const MIN_DRAWER_WIDTH = 280;
-const MAX_DRAWER_WIDTH = 640;
-
 const NO_APPLICATIONS: JobApplication[] = [];
-
-function loadStoredDrawerWidth(): number {
-    try {
-        const stored = localStorage.getItem(DRAWER_WIDTH_STORAGE_KEY);
-        // Number(null) is 0, which would clamp to the minimum: a missing value means "use the default".
-        if (stored === null) return DEFAULT_DRAWER_WIDTH;
-        const raw = Number(stored);
-        if (!Number.isFinite(raw)) return DEFAULT_DRAWER_WIDTH;
-        return Math.min(MAX_DRAWER_WIDTH, Math.max(MIN_DRAWER_WIDTH, raw));
-    } catch {
-        return DEFAULT_DRAWER_WIDTH;
-    }
-}
 
 function toggle<T>(list: ReadonlyArray<T>, item: T): T[] {
     return list.includes(item) ? list.filter((x) => x !== item) : [...list, item];
@@ -64,7 +47,7 @@ export function Queue({ refreshToken }: QueueProps) {
     const [search, setSearch] = useState('');
     const [prefs, setPrefs] = useState<QueuePrefs>(() => loadQueuePrefs());
     const [filterSheetOpen, setFilterSheetOpen] = useState(false);
-    const [drawerWidth, setDrawerWidth] = useState<number>(() => loadStoredDrawerWidth());
+    const [drawerWidth, setDrawerWidth] = useState<number>(() => loadDrawerWidth());
     const [resizingDrawer, setResizingDrawer] = useState(false);
     const drawerRef = useRef<HTMLDivElement>(null);
     const dragOriginXRef = useRef(0);
@@ -89,8 +72,7 @@ export function Queue({ refreshToken }: QueueProps) {
         document.body.style.userSelect = 'none';
         document.body.style.cursor = 'col-resize';
         function handleMouseMove(e: MouseEvent) {
-            const next = e.clientX - dragOriginXRef.current;
-            setDrawerWidth(Math.min(MAX_DRAWER_WIDTH, Math.max(MIN_DRAWER_WIDTH, next)));
+            setDrawerWidth(clampDrawerWidth(e.clientX - dragOriginXRef.current));
         }
         function handleMouseUp() {
             setResizingDrawer(false);
@@ -106,11 +88,7 @@ export function Queue({ refreshToken }: QueueProps) {
     }, [resizingDrawer]);
 
     useEffect(() => {
-        try {
-            localStorage.setItem(DRAWER_WIDTH_STORAGE_KEY, String(drawerWidth));
-        } catch {
-            // localStorage unavailable -- width just won't persist.
-        }
+        saveDrawerWidth(drawerWidth);
     }, [drawerWidth]);
 
     const all = applications ?? NO_APPLICATIONS;
@@ -182,7 +160,10 @@ export function Queue({ refreshToken }: QueueProps) {
     }
 
     const onlyBucket = prefs.buckets.length === 1 ? BUCKET_BY_ID[prefs.buckets[0]] : null;
-    const reviewCaughtUp = onlyBucket?.id === 'to_review' && !search.trim() && prefs.lanes.length === 0;
+    // "Caught up" only when nothing narrows To review down: a remembered lane, source or run filter can hide
+    // roles that are still waiting, and then the honest message is "nothing matches".
+    const reviewCaughtUp =
+        onlyBucket?.id === 'to_review' && !search.trim() && prefs.lanes.length === 0 && !prefs.source && !prefs.run;
 
     const outletContext: QueueOutletContext = useMemo(
         () => ({ onApplicationChanged: replace, onApplicationRemoved: remove }),

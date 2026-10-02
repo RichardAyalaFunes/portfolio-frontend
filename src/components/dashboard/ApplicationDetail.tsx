@@ -13,8 +13,6 @@ import { BUCKET_BY_ID, STATUS_HELP, bucketOf, dropReasonLabel, isPostingDead, la
 import { hasSkillRows } from './skillMatchModel';
 
 const ENRICHMENT_SCORE_THRESHOLD = 80;
-/** The score a role needs to pass the search agent's bar (config: matching rubrics, bands). */
-const PASS_BAR = 75;
 
 const STATUSES = ['To validate', 'Approved', 'Rejected', 'Cold', 'Flagged', 'Dropped'];
 const STAGES = ['Not applied', 'Applied', 'Interviewing', 'Offer', 'Closed'];
@@ -116,7 +114,8 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
             setApplication(updated);
             setStatus(updated.status);
             setStage(updated.application_stage);
-            if (patch.notes !== undefined) setNotes(updated.notes);
+            // Keep what was typed while the request ran: only a textarea still showing the saved text is reset.
+            if (patch.notes !== undefined) setNotes((typed) => (typed === patch.notes ? updated.notes : typed));
             queue?.onApplicationChanged(updated);
 
             const next = bucketOf(updated);
@@ -226,7 +225,7 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
                     <div className="mt-4 p-3 rounded-xl text-sm" style={{ background: 'var(--db-surface-2)' }}>
                         <p className="font-medium mb-1">
                             {bucket === 'didnt_pass'
-                                ? `Didn't pass: scored ${current.score ?? '?'}, the bar is ${PASS_BAR}`
+                                ? `Didn't pass: scored ${current.score ?? '?'}, under the pass bar`
                                 : `Cut by a rule${cutReason ? `: ${cutReason}` : ''}`}
                         </p>
                         <p style={{ color: 'var(--db-muted)' }}>
@@ -234,7 +233,7 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
                                 ? 'The search agent kept it so you can re-check the score and the reasons below.'
                                 : 'The search agent dropped it after reading the posting. It is kept so you can audit the rules.'}{' '}
                             <Link to="/dashboard/rules" className="underline" style={{ color: 'var(--db-accent)' }}>
-                                See the rules
+                                See the bar and the rules
                             </Link>
                         </p>
                     </div>

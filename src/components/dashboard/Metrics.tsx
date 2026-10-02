@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { dashboardApi, type MetricsResponse } from '../../api/dashboardApi';
 import { StatTile } from './StatTile';
 import { FunnelBar } from './FunnelBar';
+import { appliedCount, toReviewCount } from './metricsModel';
 
 const SCOPES = [
     { value: 'all', label: 'All time' },
@@ -53,8 +54,8 @@ export function Metrics() {
                     <div className="grid grid-cols-2 gap-3">
                         <StatTile label="Total tracked" value={metrics.total} />
                         <StatTile label="Approved" value={metrics.status_counts['Approved'] ?? 0} color="var(--db-band-good)" />
-                        <StatTile label="To review" value={metrics.status_counts['To validate'] ?? 0} />
-                        <StatTile label="Applied" value={metrics.stage_counts['Applied'] ?? 0} color="var(--db-accent)" />
+                        <StatTile label="To review" value={toReviewCount(metrics)} />
+                        <StatTile label="Applied" value={appliedCount(metrics.stage_counts)} color="var(--db-accent)" />
                     </div>
 
                     <div>

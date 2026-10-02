@@ -52,6 +52,17 @@ export function needsSurfacing(row: SkillMatchRow): boolean {
     return row.match.level !== 'gap' && [row.cv.level, row.linkedin.level].some((level) => level === 'partial' || level === 'missing');
 }
 
+/**
+ * How many of the requirements a document is judged on it shows: "CV shows 8 of 14". The server keeps
+ * `n/a` rows (a requirement he does not meet, which no document can show) out of its cv_* and
+ * linkedin_* counters, so the "of" is their sum and not the number of requirements.
+ */
+export function documentCoverage(summary: SkillMatchData['summary'], document: 'cv' | 'linkedin'): { shown: number; of: number } {
+    return document === 'cv'
+        ? { shown: summary.cv_shown, of: summary.cv_shown + summary.cv_partial + summary.cv_missing }
+        : { shown: summary.linkedin_shown, of: summary.linkedin_shown + summary.linkedin_partial + summary.linkedin_missing };
+}
+
 /** "6 strong · 9 partial · 1 gap": how well his skills cover the JD, without calling a partial match a full one. */
 export function matchBreakdown(summary: SkillMatchData['summary']): string {
     return [

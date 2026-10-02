@@ -2,7 +2,13 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import type { SkillMatchData, SkillMatchRow } from '../../src/api/dashboardApi.ts';
-import { hasSkillMatch, hasSkillRows, matchBreakdown, needsSurfacing } from '../../src/components/dashboard/skillMatchModel.ts';
+import {
+    documentCoverage,
+    hasSkillMatch,
+    hasSkillRows,
+    matchBreakdown,
+    needsSurfacing,
+} from '../../src/components/dashboard/skillMatchModel.ts';
 
 function row(match: SkillMatchRow['match']['level'], cv: SkillMatchRow['cv']['level'], linkedin: SkillMatchRow['linkedin']['level']): SkillMatchRow {
     return {
@@ -80,5 +86,25 @@ describe('matchBreakdown', () => {
     it('leaves out what is zero and singularises one gap', () => {
         assert.equal(matchBreakdown({ ...summary, match_partial: 0, match_gap: 1 }), '2 strong · 1 gap');
         assert.equal(matchBreakdown({ ...summary, match_strong: 0, match_partial: 3, match_gap: 0 }), '3 partial');
+    });
+});
+
+describe('documentCoverage', () => {
+    it('divides by the requirements the document is judged on, not by every requirement', () => {
+        // 5 requirements, but the CV counters only add up to 5 because none is n/a here...
+        assert.deepEqual(documentCoverage(summary, 'cv'), { shown: 2, of: 5 });
+        assert.deepEqual(documentCoverage(summary, 'linkedin'), { shown: 1, of: 5 });
+    });
+
+    it('leaves n/a rows out, as the server does: two gaps no document can show', () => {
+        // 16 requirements, 2 of them gaps marked n/a in both documents.
+        const withGaps = { ...summary, requirements: 16, cv_shown: 9, cv_partial: 3, cv_missing: 2, linkedin_shown: 5, linkedin_partial: 4, linkedin_missing: 5 };
+        assert.deepEqual(documentCoverage(withGaps, 'cv'), { shown: 9, of: 14 });
+        assert.deepEqual(documentCoverage(withGaps, 'linkedin'), { shown: 5, of: 14 });
+    });
+
+    it('is 0 of 0 when every row is n/a for that document', () => {
+        const none = { ...summary, cv_shown: 0, cv_partial: 0, cv_missing: 0 };
+        assert.deepEqual(documentCoverage(none, 'cv'), { shown: 0, of: 0 });
     });
 });

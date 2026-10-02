@@ -54,18 +54,20 @@ export function FilterMenu({ ariaLabel, emptyLabel, groups, selected, onToggle, 
         .flatMap((group) => group.options)
         .filter((option) => selected.includes(option.id))
         .map((option) => option.label);
+    const buttonText = selectedLabels.length === 0 ? emptyLabel : selectedLabels.join(', ');
 
     return (
         <div className="relative" ref={rootRef}>
             <button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
-                aria-label={ariaLabel}
+                // The name starts with the visible text, so voice control ("click All stages") and screen readers get the selection too.
+                aria-label={`${buttonText}, ${ariaLabel}`}
                 aria-expanded={open}
                 className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs"
                 style={{ background: 'var(--db-surface-2)' }}
             >
-                <span className="truncate text-left">{selectedLabels.length === 0 ? emptyLabel : selectedLabels.join(', ')}</span>
+                <span className="truncate text-left">{buttonText}</span>
                 <span className="flex items-center gap-2 shrink-0">
                     {trailing && <span style={{ color: 'var(--db-muted)' }}>{trailing}</span>}
                     <ChevronDown size={14} style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform 0.2s' }} />

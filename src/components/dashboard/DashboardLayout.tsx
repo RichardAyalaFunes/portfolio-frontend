@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { dashboardApi } from '../../api/dashboardApi';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { dashboardApi, UNAUTHORIZED_EVENT } from '../../api/dashboardApi';
+import { DashboardErrorBoundary } from './DashboardErrorBoundary';
 import { Gate } from './Gate';
 import { Queue } from './Queue';
 import { ApplicationDetail } from './ApplicationDetail';
@@ -35,12 +36,20 @@ function useNoIndex() {
 
 export default function DashboardLayout() {
     useNoIndex();
+    const { pathname } = useLocation();
     const [authState, setAuthState] = useState<AuthState>('checking');
     const [addSheetOpen, setAddSheetOpen] = useState(false);
     const [refreshToken, setRefreshToken] = useState(0);
 
     useEffect(() => {
         dashboardApi.validateStoredToken().then((ok) => setAuthState(ok ? 'authed' : 'unauthed'));
+    }, []);
+
+    // The token can expire while the tab stays open: any 401 sends him back to the gate.
+    useEffect(() => {
+        const toGate = () => setAuthState('unauthed');
+        window.addEventListener(UNAUTHORIZED_EVENT, toGate);
+        return () => window.removeEventListener(UNAUTHORIZED_EVENT, toGate);
     }, []);
 
     const handleGateSuccess = useCallback(() => setAuthState('authed'), []);
@@ -72,13 +81,15 @@ export default function DashboardLayout() {
     return (
         <div className="dashboard-scope h-screen flex flex-col overflow-hidden">
             <div className="flex-1 min-h-0 overflow-y-auto pb-20 lg:pb-0" style={{ background: 'var(--db-bg)' }}>
-                <Routes>
-                    <Route path="/" element={<Queue refreshToken={refreshToken} />}>
-                        <Route path=":applicationId" element={<ApplicationDetail />} />
-                    </Route>
-                    <Route path="/metrics" element={<Metrics />} />
-                    <Route path="/rules" element={<Rules />} />
-                </Routes>
+                <DashboardErrorBoundary resetKey={pathname}>
+                    <Routes>
+                        <Route path="/" element={<Queue refreshToken={refreshToken} />}>
+                            <Route path=":applicationId" element={<ApplicationDetail />} />
+                        </Route>
+                        <Route path="/metrics" element={<Metrics />} />
+                        <Route path="/rules" element={<Rules />} />
+                    </Routes>
+                </DashboardErrorBoundary>
             </div>
             <BottomNav onSignOut={handleSignOut} onAddClick={() => setAddSheetOpen(true)} />
             {addSheetOpen && (

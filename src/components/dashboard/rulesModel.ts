@@ -3,61 +3,144 @@
  * the agent trusts them, summing a rubric, and naming lanes for the tab bar.
  */
 
-import type { RulesDocument, RulesGate, RulesLane, RulesLine, RulesRubricItem } from '../../api/dashboardApi';
+import type { RulesDocument, RulesGate, RulesLane, RulesLine, RulesRubricItem, RulesRuleGroup } from '../../api/dashboardApi';
+
+type Obj = Record<string, unknown>;
+
+function isRecord(value: unknown): value is Obj {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** The entries of a list that are objects; anything else (null, a string, a missing list) yields nothing. */
+function records(value: unknown): Obj[] {
+    return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function strings(value: unknown): string[] {
+    return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
+}
+
+function text(value: unknown): string | null {
+    return typeof value === 'string' ? value : null;
+}
+
+function finite(value: unknown, fallback: number): number {
+    return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function normalizeLine(raw: Obj): RulesLine | null {
+    const line = text(raw.line);
+    if (!line) return null; // nothing to show or to look statistics up by
+    return {
+        line,
+        portal: text(raw.portal) ?? '',
+        status: text(raw.status) ?? 'unknown',
+        origin: text(raw.origin) ?? 'standing',
+        added: text(raw.added),
+        reason: text(raw.reason),
+        evidence: text(raw.evidence),
+        runs: typeof raw.runs === 'number' || typeof raw.runs === 'string' ? raw.runs : null,
+    };
+}
+
+function normalizeRubricItem(raw: Obj): RulesRubricItem | null {
+    const dimension = text(raw.dimension);
+    return dimension ? { dimension, weight: finite(raw.weight, 0) } : null;
+}
+
+function normalizeRuleGroup(raw: Obj): RulesRuleGroup {
+    return { title: text(raw.title) ?? '', kind: text(raw.kind) ?? 'note', items: strings(raw.items) };
+}
+
+function normalizeLane(raw: Obj, index: number): RulesLane | null {
+    const id = text(raw.id);
+    if (!id) return null; // a lane without an id cannot be selected
+    return {
+        id,
+        order: finite(raw.order, index + 1),
+        label: text(raw.label) ?? id,
+        thesis: text(raw.thesis),
+        looks_for: text(raw.looks_for),
+        excludes: text(raw.excludes),
+        title_synonyms: strings(raw.title_synonyms),
+        lines: records(raw.lines).map(normalizeLine).filter((line): line is RulesLine => line !== null),
+        rubric: records(raw.rubric).map(normalizeRubricItem).filter((item): item is RulesRubricItem => item !== null),
+        rules: records(raw.rules).map(normalizeRuleGroup),
+    };
+}
+
+function normalizeGate(raw: Obj, index: number): RulesGate {
+    const laneNotes = isRecord(raw.lane_notes) ? raw.lane_notes : {};
+    return {
+        id: text(raw.id) ?? `gate-${index + 1}`,
+        order: finite(raw.order, index + 1),
+        name: text(raw.name) ?? '',
+        summary: text(raw.summary) ?? '',
+        drop_reasons: strings(raw.drop_reasons),
+        details: strings(raw.details),
+        lane_notes: Object.fromEntries(Object.entries(laneNotes).filter(([, note]) => typeof note === 'string')) as Record<string, string>,
+    };
+}
+
+function normalizeBand(value: unknown): [number, number] {
+    return Array.isArray(value) && value.length === 2 && value.every((n) => typeof n === 'number' && Number.isFinite(n))
+        ? [value[0], value[1]]
+        : [65, 74];
+}
 
 /**
- * The document comes from a script that may be a version behind (or ahead of) this screen, so a
- * missing section must never blank the page: fill every list with [] and every threshold with
- * the bar the agent has used so far.
+ * The document comes from a script that may be a version behind (or ahead of) this screen, and the
+ * server accepts any shape that has lanes with an id, a label and a list of lines. So every section is
+ * rebuilt from what is really there: a missing section, a list of the wrong type or an entry of the
+ * wrong shape must never throw while rendering (that would blank the whole dashboard) and is left out
+ * or filled with the bar the agent has used so far.
  */
-export function normalizeRulesDocument(raw: Partial<RulesDocument>): RulesDocument {
-    const thresholds = raw.thresholds;
-    const scope = raw.scope;
-    const lanes: RulesLane[] = (raw.lanes ?? []).map((lane) => ({
-        ...lane,
-        thesis: lane.thesis ?? null,
-        looks_for: lane.looks_for ?? null,
-        excludes: lane.excludes ?? null,
-        title_synonyms: lane.title_synonyms ?? [],
-        lines: lane.lines ?? [],
-        rubric: lane.rubric ?? [],
-        rules: lane.rules ?? [],
-    }));
-    const gates: RulesGate[] = (raw.gates ?? []).map((gate) => ({
-        ...gate,
-        drop_reasons: gate.drop_reasons ?? [],
-        details: gate.details ?? [],
-        lane_notes: gate.lane_notes ?? {},
-    }));
+export function normalizeRulesDocument(input: unknown): RulesDocument {
+    const raw = isRecord(input) ? input : {};
+    const thresholds = isRecord(raw.thresholds) ? raw.thresholds : {};
+    const scope = isRecord(raw.scope) ? raw.scope : {};
+    const blocklists = isRecord(raw.blocklists) ? raw.blocklists : {};
+    const target = thresholds.salary_target_usd_month;
 
     return {
-        schema_version: raw.schema_version ?? 1,
-        config_updated_at: raw.config_updated_at ?? null,
+        schema_version: finite(raw.schema_version, 1),
+        config_updated_at: text(raw.config_updated_at),
         thresholds: {
-            excellent_bar: thresholds?.excellent_bar ?? 90,
-            pass_bar: thresholds?.pass_bar ?? 75,
-            second_opinion_band: thresholds?.second_opinion_band ?? [65, 74],
-            didnt_pass_floor: thresholds?.didnt_pass_floor ?? 55,
-            skill_match_min_score: thresholds?.skill_match_min_score ?? 60,
-            enrichment_min_score: thresholds?.enrichment_min_score ?? 80,
-            salary_floor_usd_month: thresholds?.salary_floor_usd_month ?? 4000,
-            salary_target_usd_month: thresholds?.salary_target_usd_month ?? null,
+            excellent_bar: finite(thresholds.excellent_bar, 90),
+            pass_bar: finite(thresholds.pass_bar, 75),
+            second_opinion_band: normalizeBand(thresholds.second_opinion_band),
+            didnt_pass_floor: finite(thresholds.didnt_pass_floor, 55),
+            skill_match_min_score: finite(thresholds.skill_match_min_score, 60),
+            enrichment_min_score: finite(thresholds.enrichment_min_score, 80),
+            salary_floor_usd_month: finite(thresholds.salary_floor_usd_month, 4000),
+            salary_target_usd_month: typeof target === 'string' || typeof target === 'number' ? String(target) : null,
         },
         scope: {
-            freshness_default_days: scope?.freshness_default_days ?? 3,
-            freshness_max_days: scope?.freshness_max_days ?? 7,
-            anchors: scope?.anchors ?? [],
-            portals: scope?.portals ?? [],
-            never: scope?.never ?? [],
+            freshness_default_days: finite(scope.freshness_default_days, 3),
+            freshness_max_days: finite(scope.freshness_max_days, 7),
+            anchors: records(scope.anchors).flatMap((anchor) => {
+                const label = text(anchor.label) ?? text(anchor.id);
+                return label ? [{ id: text(anchor.id) ?? label, label }] : [];
+            }),
+            portals: records(scope.portals).flatMap((portal) => {
+                const label = text(portal.label) ?? text(portal.id);
+                return label ? [{ id: text(portal.id) ?? label, tier: finite(portal.tier, 99), label }] : [];
+            }),
+            never: strings(scope.never),
         },
-        lanes,
-        gates,
-        deal_breakers: raw.deal_breakers ?? [],
-        review_tags: raw.review_tags ?? [],
+        lanes: records(raw.lanes)
+            .map(normalizeLane)
+            .filter((lane): lane is RulesLane => lane !== null),
+        gates: records(raw.gates).map(normalizeGate),
+        deal_breakers: strings(raw.deal_breakers),
+        review_tags: records(raw.review_tags).flatMap((tag) => {
+            const id = text(tag.id);
+            return id ? [{ id, when: text(tag.when) ?? '', effect: text(tag.effect) ?? '' }] : [];
+        }),
         blocklists: {
-            companies: raw.blocklists?.companies ?? [],
-            allowed_companies: raw.blocklists?.allowed_companies ?? [],
-            title_screen_terms: raw.blocklists?.title_screen_terms ?? [],
+            companies: strings(blocklists.companies),
+            allowed_companies: strings(blocklists.allowed_companies),
+            title_screen_terms: strings(blocklists.title_screen_terms),
         },
     };
 }
@@ -99,7 +182,7 @@ const LANE_TAB_LABELS: Record<string, string> = {
 };
 
 export function laneTabLabel(id: string, fallback: string): string {
-    return LANE_TAB_LABELS[id] ?? fallback;
+    return Object.hasOwn(LANE_TAB_LABELS, id) ? LANE_TAB_LABELS[id] : fallback;
 }
 
 /** "Oct 1, 2026" from an ISO timestamp or date; the raw text when it is not a date. */

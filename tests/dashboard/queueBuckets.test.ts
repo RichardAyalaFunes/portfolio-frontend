@@ -10,6 +10,7 @@ import {
     dropReasonLabel,
     filterApplications,
     isBelowBar,
+    isBucketId,
     isPostingDead,
     laneCounts,
     laneLabel,
@@ -157,6 +158,45 @@ describe('bucketOf: dropped roles', () => {
     it('lets Richard overrule the agent: an approved below-bar role is To apply', () => {
         assert.equal(bucketOf(app({ status: 'Approved', drop_stage: 'scored', drop_reason: 'below_bar' })), 'to_apply');
     });
+
+    it("does not offer a below-bar role for review just because it was stored with the default status", () => {
+        // Production: one role scored under the bar was ingested as To validate and sat in the default view.
+        const stored = { status: 'To validate', drop_stage: 'scored', drop_reason: 'below_bar' };
+        assert.equal(bucketOf(app(stored)), 'didnt_pass');
+        assert.equal(bucketOf(app({ ...stored, live_state: 'CLOSED' })), 'didnt_pass');
+        assert.equal(bucketOf(app({ ...stored, live_state: null })), 'didnt_pass');
+        assert.equal(bucketOf(app({ status: 'To validate', drop_stage: 'scored' })), 'didnt_pass');
+        assert.equal(bucketOf(app({ status: 'To validate', drop_reason: 'below_bar' })), 'didnt_pass');
+    });
+
+    it('keeps an applied below-bar role in its stage, and the agent\'s explicit Flagged as Flagged', () => {
+        assert.equal(bucketOf(app({ status: 'To validate', application_stage: 'Applied', drop_stage: 'scored' })), 'applied');
+        assert.equal(bucketOf(app({ status: 'Flagged', drop_stage: 'scored', drop_reason: 'below_bar' })), 'flagged');
+    });
+
+    it('does not move a role cut by a gate before scoring: it was never scored', () => {
+        assert.equal(bucketOf(app({ status: 'To validate', drop_stage: 'read', drop_reason: 'off_lane' })), 'to_review');
+    });
+});
+
+describe('lookups only match their own keys', () => {
+    const inherited = ['toString', 'constructor', 'hasOwnProperty', '__proto__', 'valueOf'];
+
+    it('accepts a bucket id only when it is one', () => {
+        for (const bucket of BUCKETS) assert.equal(isBucketId(bucket.id), true, bucket.id);
+        for (const key of [...inherited, 'nope', '', 'To review']) assert.equal(isBucketId(key), false, key);
+        for (const value of [null, undefined, 3, {}, ['to_review']]) assert.equal(isBucketId(value), false);
+    });
+
+    it('never answers a label with something inherited from Object', () => {
+        for (const key of inherited) {
+            assert.equal(typeof laneLabel(key), 'string', `laneLabel ${key}`);
+            assert.equal(typeof laneShort(key), 'string', `laneShort ${key}`);
+            assert.equal(typeof dropReasonLabel(key), 'string', `dropReasonLabel ${key}`);
+        }
+        assert.equal(laneLabel('constructor'), 'Constructor');
+        assert.equal(dropReasonLabel('constructor'), 'Constructor');
+    });
 });
 
 describe('invariants over every combination', () => {
@@ -178,7 +218,7 @@ describe('invariants over every combination', () => {
         assert.equal(everything.length, 6 * 5 * 6 * 3);
         for (const role of everything) {
             const bucket = bucketOf(role);
-            assert.ok(bucket in BUCKET_BY_ID, `${role.status}/${role.application_stage}/${role.live_state} -> ${bucket}`);
+            assert.ok(isBucketId(bucket), `${role.status}/${role.application_stage}/${role.live_state} -> ${bucket}`);
         }
     });
 
@@ -188,11 +228,26 @@ describe('invariants over every combination', () => {
         }
     });
 
-    it('lists a role under To review only when it is undecided, not applied and its posting is not dead', () => {
+    it('lists a role under To review only when it is undecided, not applied, its posting is open and it passed the bar', () => {
         for (const role of everything) {
             const inReview = bucketOf(role) === 'to_review';
-            const expected = role.status === 'To validate' && role.application_stage === 'Not applied' && !isPostingDead(role);
-            assert.equal(inReview, expected, `${role.status}/${role.application_stage}/${role.live_state}`);
+            const expected =
+                role.status === 'To validate' &&
+                role.application_stage === 'Not applied' &&
+                !isPostingDead(role) &&
+                !isBelowBar(role);
+            assert.equal(inReview, expected, `${role.status}/${role.application_stage}/${role.live_state}/${role.drop_reason}`);
+        }
+    });
+
+    it("lists a role under Didn't pass only when the agent scored it under the bar and no application or verdict of his overrides that", () => {
+        for (const role of everything) {
+            const inDidntPass = bucketOf(role) === 'didnt_pass';
+            const expected =
+                isBelowBar(role) &&
+                role.application_stage === 'Not applied' &&
+                ['To validate', 'Cold', 'Dropped'].includes(role.status);
+            assert.equal(inDidntPass, expected, `${role.status}/${role.application_stage}/${role.live_state}/${role.drop_reason}`);
         }
     });
 
@@ -280,7 +335,9 @@ describe('faceted counts', () => {
 describe('the default queue on production-shaped data', () => {
     // Mirrors the live tracker's mix: lots of dropped/cold rows, a few to review, many applied.
     const tracker = [
-        ...Array.from({ length: 10 }, () => app({ status: 'To validate' })),
+        ...Array.from({ length: 9 }, () => app({ status: 'To validate' })),
+        // The tenth was stored as To validate although it scored under the bar.
+        app({ status: 'To validate', drop_stage: 'scored', drop_reason: 'below_bar' }),
         ...Array.from({ length: 16 }, () => app({ status: 'Flagged' })),
         ...Array.from({ length: 3 }, () => app({ status: 'Approved' })),
         ...Array.from({ length: 18 }, () => app({ status: 'Approved', application_stage: 'Applied' })),
@@ -292,12 +349,12 @@ describe('the default queue on production-shaped data', () => {
 
     it('shows only the roles still waiting for review by default', () => {
         const visible = filterApplications(tracker, { buckets: [...DEFAULT_BUCKETS], lanes: [] });
-        assert.equal(visible.length, 10);
-        assert.ok(visible.every((a) => a.status === 'To validate' && a.application_stage === 'Not applied'));
+        assert.equal(visible.length, 9);
+        assert.ok(visible.every((a) => a.status === 'To validate' && a.application_stage === 'Not applied' && !isBelowBar(a)));
     });
 
-    it("has a Didn't pass view with exactly the scored-below-bar roles", () => {
-        assert.equal(filterApplications(tracker, { buckets: ['didnt_pass'], lanes: [] }).length, 15);
+    it("has a Didn't pass view with exactly the scored-below-bar roles nobody decided on", () => {
+        assert.equal(filterApplications(tracker, { buckets: ['didnt_pass'], lanes: [] }).length, 16);
         assert.equal(filterApplications(tracker, { buckets: ['dropped'], lanes: [] }).length, 154);
     });
 

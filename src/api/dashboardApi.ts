@@ -2,9 +2,13 @@
  * Backend API client for the job applications dashboard (/dashboard).
  *
  * Every call except login carries the device token as a Bearer header. On a
- * 401 the caller should send the user back to the gate (token missing/expired);
- * on a 423 the account is locked out for a while (see DashboardApiError.status).
+ * 401 (token missing/expired) the stored token is cleared and UNAUTHORIZED_EVENT
+ * is fired, which DashboardLayout turns into the gate; on a 423 the account is
+ * locked out for a while (see DashboardApiError.status).
  */
+
+/** Fired on window when the server rejects the stored token, so no screen is left showing "check your connection". */
+export const UNAUTHORIZED_EVENT = 'dashboard:unauthorized';
 
 const host = import.meta.env.VITE_BACKEND_HOST || 'localhost:8000';
 const BACKEND_URL = host.startsWith('http') ? host : `http://${host}`;
@@ -62,7 +66,11 @@ async function request<TResponse>(
     if (!response.ok) {
         const detail = await response.json().catch(() => null);
         const message = detail?.detail || response.statusText;
-        if (response.status === 401) clearToken();
+        if (response.status === 401) {
+            clearToken();
+            // A wrong password at the gate is also a 401, but the gate is already showing.
+            if (path !== '/auth/login') window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+        }
         throw new DashboardApiError(response.status, message);
     }
     if (response.status === 204) return undefined as TResponse;
@@ -212,6 +220,8 @@ export interface JobApplication {
 
 export interface MetricsResponse {
     total: number;
+    /** Roles waiting for a first look, by the queue's own rule. Absent on a server older than the review workflow. */
+    to_review?: number;
     status_counts: Record<string, number>;
     stage_counts: Record<string, number>;
     funnel_by_group: Record<string, Record<string, number>>;
