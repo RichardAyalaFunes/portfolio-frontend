@@ -112,7 +112,7 @@ function ContactRow({
 
             <div className="mt-2">
                 <select
-                    value={contact.outreach_stage}
+                    value={contact.outreach_stage ?? 'not_contacted'}
                     onChange={(e) => onStageChange(e.target.value)}
                     className="w-full px-2 py-1.5 rounded-lg text-xs"
                     style={{ background: 'var(--db-surface)' }}
