@@ -38,6 +38,16 @@ export function freshnessLabel(postedDate: string | null): string {
     return `${Math.floor(days / 30)}mo ago`;
 }
 
+/** Compact age for dense rows: "today", "3d", "2w", "3mo", or "?" when undated. */
+export function freshnessShort(postedDate: string | null): string {
+    const days = daysAgo(postedDate);
+    if (days === null) return '?';
+    if (days === 0) return 'today';
+    if (days <= 13) return `${days}d`;
+    if (days <= 60) return `${Math.floor(days / 7)}w`;
+    return `${Math.floor(days / 30)}mo`;
+}
+
 export function freshnessGroup(postedDate: string | null): string {
     const days = daysAgo(postedDate);
     if (days === null) return 'Undated';

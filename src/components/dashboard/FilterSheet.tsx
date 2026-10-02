@@ -1,8 +1,9 @@
 import type { SearchRun } from '../../api/dashboardApi';
+import { SORT_OPTIONS } from './queueBuckets';
 
+/** The filters that live in this sheet (the stage and lane menus are in the queue itself). */
 export interface Filters {
     source?: string;
-    live?: string;
     run?: string;
     sort?: string;
 }
@@ -14,12 +15,6 @@ interface FilterSheetProps {
     onApply: (filters: Filters) => void;
     onClose: () => void;
 }
-
-const SORT_OPTIONS = [
-    { value: 'posted_date.desc', label: 'Newest first' },
-    { value: 'posted_date.asc', label: 'Oldest first' },
-    { value: 'score.desc', label: 'Highest score' },
-];
 
 export function FilterSheet({ filters, sources, runs, onApply, onClose }: FilterSheetProps) {
     function update(patch: Partial<Filters>) {
@@ -79,7 +74,7 @@ export function FilterSheet({ filters, sources, runs, onApply, onClose }: Filter
                     className="text-sm text-center py-2"
                     style={{ color: 'var(--db-muted)' }}
                 >
-                    Clear all filters
+                    Reset source, run and sort
                 </button>
             </div>
         </div>

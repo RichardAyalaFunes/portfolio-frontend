@@ -2,9 +2,13 @@
  * Backend API client for the job applications dashboard (/dashboard).
  *
  * Every call except login carries the device token as a Bearer header. On a
- * 401 the caller should send the user back to the gate (token missing/expired);
- * on a 423 the account is locked out for a while (see DashboardApiError.status).
+ * 401 (token missing/expired) the stored token is cleared and UNAUTHORIZED_EVENT
+ * is fired, which DashboardLayout turns into the gate; on a 423 the account is
+ * locked out for a while (see DashboardApiError.status).
  */
+
+/** Fired on window when the server rejects the stored token, so no screen is left showing "check your connection". */
+export const UNAUTHORIZED_EVENT = 'dashboard:unauthorized';
 
 const host = import.meta.env.VITE_BACKEND_HOST || 'localhost:8000';
 const BACKEND_URL = host.startsWith('http') ? host : `http://${host}`;
@@ -62,7 +66,11 @@ async function request<TResponse>(
     if (!response.ok) {
         const detail = await response.json().catch(() => null);
         const message = detail?.detail || response.statusText;
-        if (response.status === 401) clearToken();
+        if (response.status === 401) {
+            clearToken();
+            // A wrong password at the gate is also a 401, but the gate is already showing.
+            if (path !== '/auth/login') window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+        }
         throw new DashboardApiError(response.status, message);
     }
     if (response.status === 204) return undefined as TResponse;
@@ -112,6 +120,53 @@ export interface RoleApplicationForm {
     questions: ApplicationFormQuestion[];
 }
 
+export type MatchLevel = 'strong' | 'partial' | 'gap';
+export type DocLevel = 'shown' | 'partial' | 'missing' | 'na';
+
+export interface SkillMatchRow {
+    requirement: string;
+    kind: 'must' | 'nice';
+    /** Does Richard's real experience cover this requirement? */
+    match: { level: MatchLevel; evidence: string | null };
+    /** Does the CV show it? `fix` is the wording to add when it does not. */
+    cv: { level: DocLevel; evidence: string | null; fix: string | null };
+    linkedin: { level: DocLevel; evidence: string | null; fix: string | null };
+}
+
+/** Computed server-side from the rows, so the agent never does the arithmetic. */
+export interface SkillMatchSummary {
+    requirements: number;
+    must: number;
+    nice: number;
+    match_strong: number;
+    match_partial: number;
+    match_gap: number;
+    cv_shown: number;
+    cv_partial: number;
+    cv_missing: number;
+    linkedin_shown: number;
+    linkedin_partial: number;
+    linkedin_missing: number;
+    /** Requirements Richard meets but the CV or LinkedIn does not fully show. */
+    to_surface: number;
+}
+
+/**
+ * JD requirements vs Richard's skills vs what his CV/LinkedIn show. The list
+ * endpoint returns it without `rows` (summary only); the detail endpoint
+ * returns the full table.
+ */
+export interface SkillMatchData {
+    version: number;
+    analyzed_on: string;
+    verdict: string | null;
+    cv_used: string | null;
+    linkedin_used: string | null;
+    jd_source: string | null;
+    summary: SkillMatchSummary;
+    rows?: SkillMatchRow[];
+}
+
 export interface JobApplication {
     id: string;
     legacy_id: string | null;
@@ -141,10 +196,15 @@ export interface JobApplication {
     last_seen: string | null;
     live_state: string | null;
     work_remote_allowed: boolean | null;
+    /** Where the search agent cut the role ('read' = a gate after reading the JD, 'scored' = below the bar). */
+    drop_stage: string | null;
+    /** Why it was cut (eligibility_geo, stack_paradigm, below_bar, ...). */
+    drop_reason: string | null;
     notes: string;
     postings: Array<{ id: string; url: string | null; source: string | null }>;
     contacts: RoleContact[];
     application_form: RoleApplicationForm | Record<string, never>;
+    skill_match: SkillMatchData | Record<string, never>;
     /** Other interest groups this role also serves; the primary lane is `group`. */
     secondary_lanes: string[];
     /** Every search line that surfaced this role (drives the agent's per-line yield). */
@@ -160,6 +220,8 @@ export interface JobApplication {
 
 export interface MetricsResponse {
     total: number;
+    /** Roles waiting for a first look, by the queue's own rule. Absent on a server older than the review workflow. */
+    to_review?: number;
     status_counts: Record<string, number>;
     stage_counts: Record<string, number>;
     funnel_by_group: Record<string, Record<string, number>>;
@@ -174,6 +236,112 @@ export interface SearchRun {
     cards_opened: number | null;
     portals: string[];
     notes: string | null;
+}
+
+// ── Search rules: published by the job-search agent from its private config ──
+
+export interface RulesLine {
+    /** Canonical line string, the key into `line_stats` (e.g. `"ai engineer" @peru`). */
+    line: string;
+    portal: string;
+    status: 'standing' | 'trial' | 'weekly' | 'retired' | string;
+    /** standing = fixed in the search plan, adaptive = added/changed by the agent between runs. */
+    origin: 'standing' | 'adaptive' | string;
+    added: string | null;
+    reason: string | null;
+    evidence: string | null;
+    runs: number | string | null;
+}
+
+export interface RulesRubricItem {
+    dimension: string;
+    weight: number;
+}
+
+export interface RulesRuleGroup {
+    title: string;
+    kind: 'keep' | 'drop' | 'note' | string;
+    items: string[];
+}
+
+export interface RulesLane {
+    id: string;
+    order: number;
+    label: string;
+    thesis: string | null;
+    looks_for: string | null;
+    excludes: string | null;
+    title_synonyms: string[];
+    lines: RulesLine[];
+    rubric: RulesRubricItem[];
+    rules: RulesRuleGroup[];
+}
+
+export interface RulesGate {
+    id: string;
+    order: number;
+    name: string;
+    summary: string;
+    drop_reasons: string[];
+    details: string[];
+    /** Extra rule that only applies to one lane (e.g. the language-gate exception). */
+    lane_notes: Record<string, string>;
+}
+
+export interface RulesDocument {
+    schema_version: number;
+    config_updated_at: string | null;
+    thresholds: {
+        excellent_bar: number;
+        pass_bar: number;
+        second_opinion_band: [number, number];
+        didnt_pass_floor: number;
+        skill_match_min_score: number;
+        enrichment_min_score: number;
+        salary_floor_usd_month: number;
+        salary_target_usd_month: string | null;
+    };
+    scope: {
+        freshness_default_days: number;
+        freshness_max_days: number;
+        anchors: Array<{ id: string; label: string }>;
+        portals: Array<{ id: string; tier: number; label: string }>;
+        never: string[];
+    };
+    lanes: RulesLane[];
+    gates: RulesGate[];
+    deal_breakers: string[];
+    review_tags: Array<{ id: string; when: string; effect: string }>;
+    blocklists: {
+        companies: string[];
+        allowed_companies: string[];
+        title_screen_terms: string[];
+    };
+}
+
+export interface LineStats {
+    surfaced: number;
+    approved: number;
+    rejected: number;
+    applied: number;
+}
+
+export interface LaneStats {
+    total: number;
+    to_review: number;
+    flagged: number;
+    approved: number;
+    applied: number;
+    rejected: number;
+}
+
+export interface RulesResponse {
+    /** null until the agent has published its rules once. */
+    published_at: string | null;
+    content: RulesDocument | null;
+    /** Computed at read time from the tracker, keyed by `RulesLine.line`. */
+    line_stats: Record<string, LineStats>;
+    lane_stats: Record<string, LaneStats>;
 }
 
 export interface ListFilters {
@@ -262,5 +430,9 @@ export const dashboardApi = {
     async listRuns(): Promise<SearchRun[]> {
         const result = await request<{ runs: SearchRun[] }>('GET', '/runs');
         return result.runs;
+    },
+
+    async getRules(): Promise<RulesResponse> {
+        return request<RulesResponse>('GET', '/rules');
     },
 };

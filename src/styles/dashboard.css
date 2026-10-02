@@ -95,3 +95,31 @@
     border-radius: 0.75rem;
     animation: dashboard-skeleton-pulse 1.4s ease-in-out infinite;
 }
+
+/* Requirements vs my profile: the three-column table when its own box is wide enough, stacked cards when it is
+   not. A container query rather than a viewport one because the width that matters is the detail pane's, which
+   moves with the queue drawer. The markup carries both layouts; the one that does not apply is display: none,
+   so it is also out of the accessibility tree. */
+.dashboard-skill-match {
+    container-type: inline-size;
+}
+
+.dashboard-skill-table {
+    display: none;
+}
+
+.dashboard-skill-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+@container (min-width: 720px) {
+    .dashboard-skill-table {
+        display: table;
+    }
+
+    .dashboard-skill-cards {
+        display: none;
+    }
+}
