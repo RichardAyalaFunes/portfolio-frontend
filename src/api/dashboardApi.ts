@@ -7,6 +7,8 @@
  * locked out for a while (see DashboardApiError.status).
  */
 
+import type { KnowledgePageResponse, KnowledgeSearchResponse, KnowledgeSummary } from './knowledgeTypes';
+
 /** Fired on window when the server rejects the stored token, so no screen is left showing "check your connection". */
 export const UNAUTHORIZED_EVENT = 'dashboard:unauthorized';
 
@@ -434,5 +436,24 @@ export const dashboardApi = {
 
     async getRules(): Promise<RulesResponse> {
         return request<RulesResponse>('GET', '/rules');
+    },
+
+    // ── Knowledge library (/dashboard/knowledge) ─────────────────────────────
+
+    /** Every page as a summary row (no bodies), in library order. */
+    async getKnowledgeIndex(): Promise<KnowledgeSummary[]> {
+        const result = await request<{ pages: KnowledgeSummary[] }>('GET', '/knowledge');
+        return result.pages;
+    },
+
+    /** One page with its body and the pages that link to it. `slug` keeps its slashes. */
+    async getKnowledgePage(slug: string): Promise<KnowledgePageResponse> {
+        const path = slug.split('/').map(encodeURIComponent).join('/');
+        return request<KnowledgePageResponse>('GET', `/knowledge/pages/${path}`);
+    },
+
+    /** Word-start search over the text of every page, ranked, with a snippet. */
+    async searchKnowledge(query: string): Promise<KnowledgeSearchResponse> {
+        return request<KnowledgeSearchResponse>('GET', `/knowledge/search?q=${encodeURIComponent(query)}`);
     },
 };
