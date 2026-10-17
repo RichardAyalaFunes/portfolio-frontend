@@ -142,7 +142,7 @@ export function statusLabel(status: string): string {
 /** One line per status for the detail screen, in Richard's own meaning of each. */
 export const STATUS_HELP: Record<string, string> = {
     'To validate': 'Waiting for your review. Nothing decided yet.',
-    Approved: 'You accepted this role. Set the stage to Applied once you send the application.',
+    Approved: 'You accepted this role. Click Mark applied once you send the application.',
     Rejected: 'You decided it is not for you.',
     Cold: 'The posting went stale or closed before you decided.',
     Flagged: 'The agent has a doubt (location, company type) and needs your call.',

@@ -5,17 +5,22 @@ import { dashboardApi, type JobApplication, type RoleContact } from '../../api/d
 import { BucketChip } from './BucketChip';
 import { YcBadge } from './YcBadge';
 import { ContactList } from './ContactList';
+import { ReviewActions } from './ReviewActions';
 import { RoleFormSection } from './RoleFormSection';
 import { RoleTags } from './RoleTags';
 import { SkillMatch } from './SkillMatch';
 import type { QueueOutletContext } from './queueContext';
-import { BUCKET_BY_ID, STATUS_HELP, bucketOf, dropReasonLabel, isPostingDead, laneLabel, statusLabel } from './queueBuckets';
+import { BUCKET_BY_ID, STATUS_HELP, bucketOf, dropReasonLabel, isPostingDead, laneLabel } from './queueBuckets';
+import { undoPatch, type ReviewPatch } from './reviewModel';
 import { hasSkillRows } from './skillMatchModel';
 
 const ENRICHMENT_SCORE_THRESHOLD = 80;
 
-const STATUSES = ['To validate', 'Approved', 'Rejected', 'Cold', 'Flagged', 'Dropped'];
-const STAGES = ['Not applied', 'Applied', 'Interviewing', 'Offer', 'Closed'];
+/** How long "Saved." stays up; longer when it carries an Undo, so there is time to reach it. */
+const SAVE_NOTE_MS = 4000;
+const UNDO_NOTE_MS = 8000;
+
+type SaveNote = { kind: 'ok' | 'error'; text: string; undo?: ReviewPatch };
 
 function CollapsibleSection({ title, text }: { title: string; text: string | null }) {
     const [open, setOpen] = useState(false);
@@ -50,7 +55,7 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
     const [status, setStatus] = useState('');
     const [stage, setStage] = useState('');
     const [saving, setSaving] = useState(false);
-    const [saveNote, setSaveNote] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+    const [saveNote, setSaveNote] = useState<SaveNote | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [error, setError] = useState(false);
@@ -76,7 +81,7 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
 
     useEffect(() => {
         if (saveNote?.kind !== 'ok') return;
-        const timer = setTimeout(() => setSaveNote(null), 4000);
+        const timer = setTimeout(() => setSaveNote(null), saveNote.undo ? UNDO_NOTE_MS : SAVE_NOTE_MS);
         return () => clearTimeout(timer);
     }, [saveNote]);
 
@@ -104,9 +109,15 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
     /**
      * Saves a change, then puts the server's copy into the queue's list so the
      * list on the left reflects the new status/stage straight away. `revert` undoes
-     * the optimistic select change if the save fails.
+     * the optimistic button change if the save fails. A status or stage change
+     * offers Undo; `undoing` marks the save that is that Undo.
      */
-    async function save(patch: { status?: string; stage?: string; notes?: string }, revert: () => void) {
+    async function save(
+        patch: ReviewPatch & { notes?: string },
+        revert: () => void,
+        { undoing = false }: { undoing?: boolean } = {},
+    ) {
+        const before = { status: current.status, stage: current.application_stage };
         setSaving(true);
         setSaveNote(null);
         try {
@@ -119,9 +130,14 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
             queue?.onApplicationChanged(updated);
 
             const next = bucketOf(updated);
+            const moved = next !== bucketOf(current);
+            const undo = undoing ? null : undoPatch(before, { status: updated.status, stage: updated.application_stage });
             setSaveNote({
                 kind: 'ok',
-                text: next === bucketOf(current) ? 'Saved.' : `Saved. Now in ${BUCKET_BY_ID[next].label}.`,
+                text: undoing
+                    ? moved ? `Undone. Back in ${BUCKET_BY_ID[next].label}.` : 'Undone.'
+                    : moved ? `Saved. Now in ${BUCKET_BY_ID[next].label}.` : 'Saved.',
+                undo: undo ?? undefined,
             });
         } catch {
             revert();
@@ -135,16 +151,19 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
         return save({ notes }, () => {});
     }
 
-    function handleStatusChange(nextStatus: string) {
-        const previous = status;
-        setStatus(nextStatus);
-        return save({ status: nextStatus }, () => setStatus(previous));
-    }
-
-    function handleStageChange(nextStage: string) {
-        const previous = stage;
-        setStage(nextStage);
-        return save({ stage: nextStage }, () => setStage(previous));
+    /** A Reject / Approve / stage click. Notes typed but not saved yet go along, so the verdict and its reason land together. */
+    function handleReviewChange(patch: ReviewPatch, { undoing = false }: { undoing?: boolean } = {}) {
+        const previous = { status, stage };
+        if (patch.status !== undefined) setStatus(patch.status);
+        if (patch.stage !== undefined) setStage(patch.stage);
+        return save(
+            dirty && !undoing ? { ...patch, notes } : patch,
+            () => {
+                setStatus(previous.status);
+                setStage(previous.stage);
+            },
+            { undoing },
+        );
     }
 
     async function handleDelete() {
@@ -154,6 +173,8 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
     }
 
     const cutReason = dropReasonLabel(current.drop_reason);
+    // Once he has applied, the stage says more than the verdict does ("You have an offer.").
+    const idleHelp = stage === 'Not applied' ? STATUS_HELP[status] : BUCKET_BY_ID[bucket].hint;
 
     return (
         <div className="flex flex-col min-h-full">
@@ -185,7 +206,7 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 py-4 pb-44">
+            <div className="flex-1 overflow-y-auto px-5 py-4 pb-36 lg:pb-6">
                 <div className="flex items-start justify-between gap-3">
                     <div>
                         <h1 className="text-lg font-medium leading-snug">{current.title}</h1>
@@ -317,65 +338,57 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
                         rows={4}
                         className="w-full mt-2 p-3 rounded-xl text-sm resize-none"
                     />
+                    <div className="flex items-center justify-end gap-3 mt-2">
+                        {dirty && (
+                            <span className="text-[11px]" style={{ color: 'var(--db-muted)' }}>
+                                Not saved yet. Reject, Approve or a stage change also saves it.
+                            </span>
+                        )}
+                        <button
+                            onClick={handleSaveNotes}
+                            disabled={!dirty || saving}
+                            className="shrink-0 px-4 rounded-xl text-sm font-medium disabled:opacity-40"
+                            style={{ background: 'var(--db-accent)', color: '#0b0e14' }}
+                        >
+                            Save notes
+                        </button>
+                    </div>
                 </div>
             </div>
 
             <div
-                className="fixed bottom-20 lg:sticky lg:bottom-0 inset-x-0 lg:inset-x-auto px-4 py-3 flex flex-col gap-2"
+                className="fixed bottom-20 lg:sticky lg:bottom-0 inset-x-0 lg:inset-x-auto z-10 px-4 py-3 flex flex-col gap-2"
                 style={{ background: 'var(--db-surface)', borderTop: '1px solid var(--db-border)' }}
             >
-                <div className="flex gap-2">
-                    <select
-                        value={status}
-                        onChange={(e) => handleStatusChange(e.target.value)}
-                        disabled={saving}
-                        aria-label="Status"
-                        className="flex-1 px-3 py-2.5 rounded-xl text-sm"
+                <ReviewActions state={{ status, stage }} saving={saving} onChange={(patch) => void handleReviewChange(patch)} />
+                <div className="flex items-center gap-3 min-h-[18px]">
+                    <p
+                        role="status"
+                        aria-live="polite"
+                        className="flex-1 min-w-0 text-[11px] leading-snug"
+                        style={{
+                            color: saving
+                                ? 'var(--db-muted)'
+                                : saveNote
+                                  ? saveNote.kind === 'error'
+                                      ? 'var(--db-band-drop)'
+                                      : 'var(--db-band-good)'
+                                  : 'var(--db-muted)',
+                        }}
                     >
-                        {STATUSES.map((s) => (
-                            <option key={s} value={s}>
-                                {statusLabel(s)}
-                            </option>
-                        ))}
-                    </select>
-                    <select
-                        value={stage}
-                        onChange={(e) => handleStageChange(e.target.value)}
-                        disabled={saving}
-                        aria-label="Stage"
-                        className="flex-1 px-3 py-2.5 rounded-xl text-sm"
-                    >
-                        {STAGES.map((s) => (
-                            <option key={s} value={s}>
-                                {s}
-                            </option>
-                        ))}
-                    </select>
+                        {saving ? 'Saving…' : (saveNote?.text ?? idleHelp)}
+                    </p>
+                    {!saving && saveNote?.undo && (
+                        <button
+                            onClick={() => saveNote.undo && void handleReviewChange(saveNote.undo, { undoing: true })}
+                            // Padding cancelled by negative margins: a finger-sized target that does not grow the bar when it appears.
+                            className="shrink-0 px-2 py-2 -my-2 -mr-2 text-xs font-medium underline"
+                            style={{ color: 'var(--db-accent)', minHeight: 0 }}
+                        >
+                            Undo
+                        </button>
+                    )}
                 </div>
-                <p
-                    role="status"
-                    aria-live="polite"
-                    className="text-[11px] leading-snug"
-                    style={{
-                        color: saving
-                            ? 'var(--db-muted)'
-                            : saveNote
-                              ? saveNote.kind === 'error'
-                                  ? 'var(--db-band-drop)'
-                                  : 'var(--db-band-good)'
-                              : 'var(--db-muted)',
-                    }}
-                >
-                    {saving ? 'Saving…' : (saveNote?.text ?? STATUS_HELP[status])}
-                </p>
-                <button
-                    onClick={handleSaveNotes}
-                    disabled={!dirty || saving}
-                    className="w-full py-2.5 rounded-xl font-medium disabled:opacity-40"
-                    style={{ background: 'var(--db-accent)', color: '#0b0e14' }}
-                >
-                    {saving ? 'Saving…' : 'Save notes'}
-                </button>
             </div>
 
             {confirmDelete && (
