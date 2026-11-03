@@ -298,6 +298,67 @@ src/
 <p>Python ↔ TS: tu <code>acme_credit/collateral/adapters/inbound/http</code> (FastAPI router) ≈ <code>collateral/adapters/inbound/http/collateral.controller.ts</code> (Nest) o un router Express.</p>
 </div></details></section>
 
+<section class="card" id="mvc"><details open><summary>MVC vs capas vs hexagonal: ¿quién accede a la DB y quién responde? <span class="tag p0">P0</span></summary><div class="body">
+<div class="note"><b>Respuesta corta:</b> <b>nunca el controller</b> accede a la base de datos. El controller recibe la request y devuelve la respuesta. Los datos los toca el <b>Model / Repository</b> (MVC) o el <b>adapter de salida</b> (hexagonal). En medio, el <b>Service / caso de uso</b> tiene la lógica.</div>
+<script type="text/plain" data-lang="sh" data-title="el mismo flujo con tres nombres">
+                 ENTRA y SALE HTTP        LÓGICA DE NEGOCIO         TOCA LA BASE DE DATOS
+MVC clásico:     Controller (+ View)  →   Model (datos + reglas)    Model
+Backend real:    Controller           →   Service               →   Repository / Model (ORM)
+(NestJS, el video, FastAPI)
+Hexagonal:       Inbound adapter      →   Application (caso de uso) →   Outbound adapter
+                 (controller/router)      + Domain (reglas)             (PgRepository) implementa un Port
+
+Respuesta:  Repository → Service → Controller → (framework serializa a JSON = la "View")
+</script>
+<table>
+<tr><th>Pieza</th><th>Responsabilidad</th><th>NO debe</th><th>NestJS</th><th>FastAPI</th><th>Hexagonal</th></tr>
+<tr><td><b>Controller</b></td><td>leer request (params, body, headers), llamar al service, elegir status HTTP, devolver DTO</td><td>SQL, reglas de negocio, llamar APIs externas, <code>JSON.stringify</code></td><td><code>@Controller</code></td><td><code>@router.post</code></td><td>inbound adapter</td></tr>
+<tr><td><b>DTO</b></td><td>forma y validación de lo que entra/sale</td><td>lógica</td><td>class + class-validator / Zod</td><td>Pydantic model</td><td>borde del adapter</td></tr>
+<tr><td><b>Service</b></td><td>orquestar el caso de uso: reglas, transacciones, llamar repos y clientes externos</td><td>conocer HTTP (<code>req</code>, <code>res</code>, status codes)</td><td><code>@Injectable</code> service</td><td>función/clase service</td><td>application (caso de uso)</td></tr>
+<tr><td><b>Entity / Domain</b></td><td>datos + invariantes del negocio (<code>account.debit()</code>)</td><td>importar ORM/HTTP (en hexagonal estricto)</td><td>entity</td><td>modelo de dominio</td><td>domain</td></tr>
+<tr><td><b>Repository / Model ORM</b></td><td>leer y escribir en la DB</td><td>reglas de negocio, HTTP</td><td><code>Repository&lt;T&gt;</code>, Sequelize model</td><td>SQLAlchemy session / SQLModel</td><td>outbound adapter (implementa port)</td></tr>
+<tr><td><b>Client externo</b></td><td>hablar con APIs de terceros (tipo de cambio, SPEI)</td><td>reglas que no son suyas</td><td>provider/service</td><td>httpx client</td><td>outbound adapter</td></tr>
+<tr><td><b>View</b></td><td>presentar la respuesta</td><td>—</td><td>serialización automática a JSON</td><td><code>response_model</code></td><td>—</td></tr>
+</table>
+<h3>Mismo endpoint, mal y bien repartido</h3>
+<script type="text/plain" data-lang="ts" data-kind="bad">
+@Post('transactions')
+async commission(@Body() body: any): Promise<string> {
+  const rows = await this.dataSource.query(`SELECT * FROM rates WHERE c='${body.currency}'`); // SQL en controller
+  const fee = parseFloat((body.amount * 0.005).toFixed(2));                                     // regla en controller
+  await this.dataSource.query('INSERT INTO transactions ...');                                  // escritura en controller
+  return JSON.stringify({ fee });                                                               // el framework ya serializa
+}
+</script>
+<script type="text/plain" data-lang="ts" data-kind="good">
+@Controller('transactions')
+export class TransactionsController {
+  constructor(private readonly transactions: TransactionsService) {}
+  @Post()
+  createTransaction(@Body() dto: CreateTransactionDto): Promise<Transaction> {   // sólo HTTP
+    return this.transactions.createTransaction(dto);
+  }
+}
+
+@Injectable()
+export class TransactionsService {                                                // lógica
+  constructor(private readonly repo: TransactionsRepository, private readonly rates: ExchangeRateService) {}
+  async createTransaction(dto: CreateTransactionDto): Promise<Transaction> {
+    const rate = await this.rates.getRate(dto.currency);
+    const commissionCents = calculateCommission(dto.amountCents, rate);
+    return this.repo.insert({ ...dto, rate, commissionCents });
+  }
+}
+
+@Injectable()
+export class TransactionsRepository {                                             // datos
+  constructor(@InjectRepository(TransactionEntity) private readonly orm: Repository<TransactionEntity>) {}
+  insert(data: NewTransaction): Promise<Transaction> { return this.orm.save(data); }
+}
+</script>
+<div class="note">Pista para identificar el patrón en un repo desconocido: carpetas <code>controllers/</code>, <code>services/</code>, <code>entities/</code>, <code>dto/</code>, <code>*.module.ts</code> → NestJS estilo MVC por capas. <code>domain/</code>, <code>application/</code>, <code>ports/</code>, <code>adapters/</code> → hexagonal. No importa el nombre: pregúntate “¿quién toca HTTP, quién decide, quién toca la DB?”.</div>
+</div></details></section>
+
 <section class="card" id="review"><details open><summary>Checklist para revisar código ajeno en 2 minutos <span class="tag p0">P0</span></summary><div class="body">
 <ol>
 <li><b>Correctitud:</b> ¿hace lo que dice? ¿casos límite (0, negativo, vacío, null)?</li>
