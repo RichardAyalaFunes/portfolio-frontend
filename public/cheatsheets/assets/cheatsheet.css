@@ -74,3 +74,19 @@ ul { padding-left: 20px; } li { margin: 2px 0; }
 :root[data-theme="dark"] .hljs-keyword { color: #c678dd; } :root[data-theme="dark"] .hljs-string { color: #98c379; } :root[data-theme="dark"] .hljs-title { color: #61afef; } :root[data-theme="dark"] .hljs-number { color: #d19a66; }
 @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } nav.toc { position: static; max-height: none; } .grid2 { grid-template-columns: 1fr; } }
 @media print { header.top, nav.toc { display: none; } .layout { display: block; } details { display: block; } }
+
+/* Shared navigation; glossary styles are used only by page 14. */
+header.top a.home { color: var(--accent); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; white-space: nowrap; }
+header.top a.home:hover { background: var(--code-bg); border-color: var(--accent); }
+.breadcrumb-separator { color: var(--muted); }
+section.card { scroll-margin-top: 120px; }
+.hint-term { display: inline; padding: 0; border: 0; border-bottom: 1px dashed var(--accent); border-radius: 0; background: transparent; color: inherit; font: inherit; cursor: help; text-align: inherit; }
+.hint-term:hover { color: var(--accent); }
+.hint-term:focus-visible, header.top a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.term-hint { position: fixed; z-index: 30; width: min(420px, calc(100vw - 16px)); max-height: min(480px, calc(100dvh - 16px)); overflow: auto; padding: 16px; border: 1px solid var(--accent); border-radius: 12px; background: var(--surface); color: var(--text); box-shadow: 0 12px 36px #0003; font: 14px/1.5 var(--sans); }
+.term-hint[hidden] { display: none; }
+.term-hint strong { color: var(--accent); }
+.term-hint p { margin: 10px 0 0; }
+.term-hint pre { margin-top: 10px; padding: 10px; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.5 var(--mono); }
+@media (max-width: 600px) { header.top { gap: 8px; } header.top .title { font-size: 13px; } header.top .spacer { display: none; } nav.toc { top: auto; } }
+@media print { .term-hint, .hint-guide { display: none; } .hint-term { border: 0; } }
