@@ -368,6 +368,137 @@ try { return await charge(id); } catch (e) { /* ahora sí */ }
 <div class="note warn">Promesa no esperada que rechaza → <code>unhandledRejection</code> → Node ≥15 <b>termina el proceso</b>. Activa ESLint <code>@typescript-eslint/no-floating-promises</code>.</div>
 </div></details></section>
 
+<section class="card" id="promesas"><details open><summary>Promesas a fondo: NO reemplazan try/catch <span class="tag p0">P0</span></summary><div class="body">
+<div class="note warn"><b>Corrección:</b> una Promise no reemplaza <code>try/catch</code>. Una Promise representa un <b>valor futuro</b> (≈ <code>asyncio.Future</code>). Los errores de una Promise se capturan con <code>.catch()</code> <i>o</i> con <code>try/catch</code> alrededor de un <code>await</code>. <code>async/await</code> es azúcar sintáctico sobre Promises.</div>
+<table><tr><th>Estado</th><th>Significa</th><th>Python</th></tr>
+<tr><td><code>pending</code></td><td>todavía no terminó</td><td>Future no resuelto</td></tr>
+<tr><td><code>fulfilled</code></td><td>terminó con valor → <code>resolve(v)</code></td><td><code>fut.set_result(v)</code></td></tr>
+<tr><td><code>rejected</code></td><td>terminó con error → <code>reject(e)</code></td><td><code>fut.set_exception(e)</code></td></tr></table>
+<script type="text/plain" data-lang="ts" data-title="3 formas equivalentes de manejar el error">
+// 1) .then / .catch (encadenado)
+getRate('USD')
+  .then((rate) => createTransaction(input, rate))
+  .then((tx) => console.log(tx.id))
+  .catch((e) => logger.error(e))          // atrapa errores de cualquier eslabón
+  .finally(() => metrics.done());
+
+// 2) async/await + try/catch  ← lo más legible, úsalo por defecto
+async function run() {
+  try {
+    const rate = await getRate('USD');
+    const tx = await createTransaction(input, rate);
+    return tx;
+  } catch (e) {
+    logger.error(e);
+    throw e;                               // relanzar si el que llama debe enterarse
+  } finally {
+    metrics.done();
+  }
+}
+
+// 3) await + .catch puntual (valor por defecto)
+const rate = await getRate('USD').catch(() => 1);
+</script>
+<h3>El constructor <code>new Promise</code>: convertir callbacks / eventos / subscribe en await</h3>
+<p>Exactamente lo que se evalúa en el video de referencia (<a href="14-refactor-entrevista.html">14</a>): un servicio externo que usa <code>subscribe(callback)</code> y un <code>return</code> dentro del callback que “se pierde en el vacío”.</p>
+<script type="text/plain" data-lang="ts" data-kind="bad">
+async createWithExchange(input: TransactionInput): Promise<Transaction> {
+  this.exchangeService.getRate(input.currency).subscribe((rate) => {
+    const tx = this.repo.insert({ ...input, rate });
+    return tx;          // ✗ retorna al subscribe, NO a createWithExchange → la función devuelve undefined
+  });
+}
+</script>
+<script type="text/plain" data-lang="ts" data-kind="good">
+async createWithExchange(input: TransactionInput): Promise<Transaction> {
+  const rate = await new Promise<number>((resolve, reject) => {
+    this.exchangeService.getRate(input.currency).subscribe({
+      next: (value) => resolve(value),     // éxito → la Promise se cumple con el valor
+      error: (err) => reject(err),         // error → la Promise se rechaza (lo atrapa try/catch del que llama)
+    });
+  });
+  return this.persistTransaction(input, rate);
+}
+// Con RxJS real: const rate = await firstValueFrom(this.exchangeService.getRate(c));
+</script>
+<script type="text/plain" data-lang="ts" data-title="otros casos del constructor">
+// callback estilo Node (err, result)
+function readFileAsync(path: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    fs.readFile(path, 'utf8', (err, data) => (err ? reject(err) : resolve(data)));
+  });
+}
+// o directo: import { promisify } from 'node:util'; const read = promisify(fs.readFile);
+
+// evento
+const waitForReady = (emitter: EventEmitter) =>
+  new Promise<void>((resolve, reject) => { emitter.once('ready', resolve); emitter.once('error', reject); });
+
+// sleep
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+</script>
+<script type="text/plain" data-lang="py" data-title="equivalente en Python">
+loop = asyncio.get_running_loop()
+fut = loop.create_future()
+client.get_rate("USD", on_ok=fut.set_result, on_error=fut.set_exception)
+rate = await fut
+</script>
+<h3>Errores frecuentes con el constructor</h3>
+<script type="text/plain" data-lang="ts" data-kind="bad">
+new Promise(async (resolve) => { resolve(await x()); });  // executor async: si x() lanza, el error se pierde
+new Promise((resolve) => { if (ok) resolve(v); });       // nunca resuelve si !ok → cuelga para siempre
+return new Promise((resolve) => resolve(getTx()));       // envolver algo que YA es Promise (anti-patrón)
+</script>
+<script type="text/plain" data-lang="ts" data-kind="good">
+return getTx();                                           // si ya es Promise, devuélvela
+new Promise((resolve, reject) => (ok ? resolve(v) : reject(new Error('…'))));  // todo camino resuelve o rechaza
+</script>
+</div></details></section>
+
+<section class="card" id="this"><details open><summary><code>this</code> vs <code>self</code> de Python <span class="tag p0">P0</span></summary><div class="body">
+<table>
+<tr><th></th><th>Python <code>self</code></th><th>JS/TS <code>this</code></th></tr>
+<tr><td>Qué es</td><td>la instancia actual</td><td>la instancia actual… <b>según cómo se llame</b> la función</td></tr>
+<tr><td>Declaración</td><td>explícito: <code>def pay(self, amt)</code></td><td>implícito: <code>pay(amt) { this.x }</code></td></tr>
+<tr><td>Acceder a atributos</td><td><code>self.repo</code> (obligatorio)</td><td><code>this.repo</code> (obligatorio dentro de clases)</td></tr>
+<tr><td>Método pasado como callback</td><td>sigue ligado (<i>bound method</i>)</td><td>✗ <b>pierde</b> <code>this</code> → <code>undefined</code></td></tr>
+<tr><td>Arrow function</td><td>—</td><td>no tiene <code>this</code> propio: usa el de afuera (léxico)</td></tr>
+</table>
+<script type="text/plain" data-lang="py" data-title="python">
+class TransactionService:
+    def __init__(self, repo):
+        self.repo = repo
+    def create(self, data):
+        return self.repo.insert(data)
+
+cb = service.create        # bound method: self ya está ligado
+cb(data)                   # ✓ funciona
+</script>
+<script type="text/plain" data-lang="ts" data-title="typescript">
+class TransactionService {
+  constructor(private readonly repo: TransactionRepo) {}   // ≈ __init__ + self.repo = repo
+  create(data: TxInput) { return this.repo.insert(data); }
+}
+
+const cb = service.create;
+cb(data);                              // ✗ TypeError: Cannot read properties of undefined (reading 'repo')
+emitter.on('tx', service.create);      // ✗ mismo problema
+setTimeout(service.create, 0);         // ✗
+
+emitter.on('tx', (d) => service.create(d));   // ✓ arrow: llama con el objeto
+const bound = service.create.bind(service);   // ✓ bind fija this
+class S2 { create = (d: TxInput) => this.repo.insert(d); constructor(private repo: TransactionRepo) {} } // ✓ propiedad arrow
+</script>
+<script type="text/plain" data-lang="ts" data-title="dentro de callbacks">
+class Svc {
+  total = 0n;
+  sumBad(txs: Tx[]) { txs.forEach(function (t) { this.total += t.amount; }); }   // ✗ function normal: this = undefined
+  sumOk(txs: Tx[])  { txs.forEach((t) => { this.total += t.amount; }); }        // ✓ arrow hereda this de sumOk
+}
+</script>
+<div class="note">Regla práctica: dentro de clases usa <b>arrow functions</b> para callbacks; nunca pases <code>this.metodo</code> suelto como callback sin <code>bind</code> o arrow. En NestJS los métodos de controller/servicio los llama el framework con el <code>this</code> correcto.</div>
+</div></details></section>
+
 <section class="card" id="dinero"><details open><summary>Dinero en TS <span class="tag p0">P0</span></summary><div class="body">
 <script type="text/plain" data-lang="ts" data-kind="bad">
 0.1 + 0.2;                    // 0.30000000000000004
