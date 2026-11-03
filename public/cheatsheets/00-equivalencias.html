@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python vs TypeScript</title>
+<link rel="stylesheet" href="assets/cheatsheet.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="assets/cheatsheet.js" defer></script>
+</head>
+<body>
+<header class="top"><a class="home" href="index.html">📚</a><span class="title">00 · Python/FastAPI ↔ TypeScript/Node</span><span class="spacer"></span></header>
+<div class="layout"><nav class="toc"></nav><main>
+<h1>Mapa de equivalencias</h1>
+<p class="lead">Mismo problema (cuenta + transferencia), dos ecosistemas. Lo que ya sabes en Python → su nombre en TS.</p>
+
+<section class="card" id="mapa"><details open><summary>Tabla maestra <span class="tag p0">P0</span></summary><div class="body">
+<table>
+<tr><th>Necesidad</th><th>Python / FastAPI</th><th>TypeScript / Node</th><th>Nota</th></tr>
+<tr><td>Validación en runtime</td><td><b>Pydantic</b> (<code>BaseModel</code>)</td><td><b>Zod</b> (<code>z.object</code>), class-validator (Nest)</td><td>TS sólo valida al compilar. Datos externos (HTTP, env, webhooks) <b>necesitan</b> Zod.</td></tr>
+<tr><td>Tipo a partir del schema</td><td>la clase Pydantic ya es el tipo</td><td><code>type T = z.infer&lt;typeof Schema&gt;</code></td><td>Una sola fuente de verdad.</td></tr>
+<tr><td>Inyección de dependencias</td><td><code>Depends()</code></td><td><b>tsyringe</b> (<code>@injectable</code>, <code>container.resolve</code>), <b>NestJS</b> DI</td><td>FastAPI resuelve por función; tsyringe/Nest por clase+constructor.</td></tr>
+<tr><td>ORM “clásico”</td><td><b>SQLAlchemy</b> (ORM + Core)</td><td><b>Sequelize</b>, <b>TypeORM</b></td><td>Sequelize ≈ Active Record (<code>Model.create</code>, <code>instance.save()</code>), parecido a Django ORM.</td></tr>
+<tr><td>ORM con clases tipadas</td><td><b>SQLModel</b> = SQLAlchemy + Pydantic</td><td><b>TypeORM</b> (<code>@Entity</code>, <code>@Column</code>)</td><td>Decoradores sobre clases, igual que SQLModel.</td></tr>
+<tr><td>ORM schema-first</td><td>(Prisma Client Python, poco usado)</td><td><b>Prisma</b> (<code>schema.prisma</code> → cliente generado)</td><td>Escribes schema, genera tipos. Muy tipado; menos control de locks.</td></tr>
+<tr><td>Query builder</td><td>SQLAlchemy Core</td><td><b>Knex</b>, <b>Kysely</b>, <b>Drizzle</b></td><td>Cerca de SQL, tipado.</td></tr>
+<tr><td>Driver SQL crudo</td><td>psycopg / asyncpg</td><td><b>pg</b> (node-postgres)</td><td>Parámetros <code>$1, $2</code>.</td></tr>
+<tr><td>Migraciones</td><td>Alembic</td><td>sequelize-cli, TypeORM migrations, prisma migrate</td><td></td></tr>
+<tr><td>Framework HTTP</td><td>FastAPI / Starlette</td><td>Express, Fastify, <b>NestJS</b> (sobre Express/Fastify)</td><td>Nest ≈ FastAPI + estructura tipo Angular.</td></tr>
+<tr><td>Servidor</td><td>uvicorn</td><td><code>node dist/main.js</code>, <code>tsx watch</code></td><td>Node es el runtime; no hay ASGI.</td></tr>
+<tr><td>Config / env</td><td>pydantic-settings</td><td>Zod sobre <code>process.env</code>, <code>@nestjs/config</code></td><td></td></tr>
+<tr><td>Tests</td><td>pytest, fixtures, parametrize</td><td>Vitest / Jest, <code>beforeEach</code>, <code>it.each</code></td><td>Ver <a href="07-testing.html">07</a>.</td></tr>
+<tr><td>HTTP tests</td><td><code>TestClient</code> (httpx)</td><td><b>Supertest</b></td><td></td></tr>
+<tr><td>Paquetes</td><td>pip / uv, <code>pyproject.toml</code>, <code>uv.lock</code></td><td>npm / pnpm, <code>package.json</code>, <code>package-lock.json</code></td><td><code>npm ci</code> ≈ <code>uv sync --frozen</code>.</td></tr>
+<tr><td>Async</td><td><code>asyncio</code>, <code>await</code>, <code>gather</code></td><td>Promises, <code>await</code>, <code>Promise.all</code></td><td>En Node todo I/O es async por defecto; un solo hilo.</td></tr>
+<tr><td>Decimal</td><td><code>decimal.Decimal</code></td><td><code>bigint</code> en centavos, decimal.js, Big.js</td><td><code>number</code> es float → nunca para dinero.</td></tr>
+<tr><td>Logging</td><td>structlog / logging</td><td><b>Pino</b>, Winston</td><td></td></tr>
+<tr><td>Colas</td><td>Celery, RQ</td><td><b>BullMQ</b> (Redis), SQS SDK</td><td></td></tr>
+</table>
+</div></details></section>
+
+<section class="card" id="zod"><details open><summary>Pydantic ↔ Zod <span class="tag p0">P0</span></summary><div class="body">
+<div class="grid2">
+<script type="text/plain" data-lang="py" data-title="python · pydantic">
+from decimal import Decimal
+from pydantic import BaseModel, Field, field_validator
+
+class TransferIn(BaseModel):
+    from_account_id: str = Field(min_length=1)
+    to_account_id: str
+    amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+    currency: str = "MXN"
+
+    @field_validator("to_account_id")
+    @classmethod
+    def not_same(cls, v, info):
+        if v == info.data.get("from_account_id"):
+            raise ValueError("same account")
+        return v
+
+dto = TransferIn.model_validate(payload)  # lanza ValidationError
+</script>
+<script type="text/plain" data-lang="ts" data-title="typescript · zod">
+import { z } from 'zod';
+
+export const TransferIn = z
+  .object({
+    fromAccountId: z.string().uuid(),
+    toAccountId: z.string().uuid(),
+    // string → evita floats; regex de 2 decimales
+    amount: z.string().regex(/^\d{1,10}(\.\d{1,2})?$/),
+    currency: z.enum(['MXN', 'USD']).default('MXN'),
+  })
+  .refine((d) => d.fromAccountId !== d.toAccountId, {
+    message: 'same account', path: ['toAccountId'],
+  });
+
+export type TransferIn = z.infer<typeof TransferIn>; // tipo derivado
+
+const dto = TransferIn.parse(payload);            // lanza ZodError
+const r = TransferIn.safeParse(payload);          // { success, data | error }
+if (!r.success) console.log(r.error.flatten());
+</script>
+</div>
+<h3>Variantes útiles</h3>
+<script type="text/plain" data-lang="ts">
+z.coerce.number().int().positive();           // "42" → 42 (query params)
+z.string().transform((s) => BigInt(s));       // transforma tras validar
+z.discriminatedUnion('type', [                // ≈ Pydantic Field(discriminator=)
+  z.object({ type: z.literal('card'), last4: z.string().length(4) }),
+  z.object({ type: z.literal('spei'), clabe: z.string().length(18) }),
+]);
+Schema.partial(); Schema.pick({ amount: true }); Schema.extend({ note: z.string().optional() });
+const Env = z.object({ DATABASE_URL: z.string().url(), PORT: z.coerce.number().default(3000) });
+export const env = Env.parse(process.env);    // ≈ pydantic-settings, falla al arrancar
+</script>
+<div class="note"><b>Clave:</b> <code>interface</code>/<code>type</code> desaparecen al compilar. Si llega <code>{"amount": "abc"}</code> por HTTP, TS no lo detecta. Zod sí. <code>parse</code> en el borde, tipos confiables adentro.</div>
+</div></details></section>
+
+<section class="card" id="di"><details open><summary>Depends ↔ tsyringe ↔ NestJS DI <span class="tag p0">P0</span></summary><div class="body">
+<p>DI = una clase no construye sus dependencias; las recibe. Permite cambiar Postgres por un fake en tests.</p>
+<script type="text/plain" data-lang="py" data-title="python · fastapi depends">
+def get_session() -> Iterator[Session]:
+    with SessionLocal() as s:
+        yield s
+
+def get_repo(s: Session = Depends(get_session)) -> AccountRepo:
+    return SqlAccountRepo(s)
+
+@app.post("/transfers")
+def transfer(body: TransferIn, repo: AccountRepo = Depends(get_repo)):
+    return TransferService(repo).execute(body)
+
+# test: app.dependency_overrides[get_repo] = lambda: FakeRepo()
+</script>
+<script type="text/plain" data-lang="ts" data-title="typescript · tsyringe">
+import 'reflect-metadata';                  // obligatorio, 1 vez al inicio
+import { container, injectable, inject } from 'tsyringe';
+
+export interface AccountRepo { findById(id: string): Promise<Account | null>; }
+export const ACCOUNT_REPO = Symbol('AccountRepo'); // interfaces no existen en runtime → token
+
+@injectable()
+export class SqlAccountRepo implements AccountRepo { /* ... */ }
+
+@injectable()
+export class TransferService {
+  constructor(@inject(ACCOUNT_REPO) private readonly repo: AccountRepo) {}
+}
+
+container.register(ACCOUNT_REPO, { useClass: SqlAccountRepo });
+const svc = container.resolve(TransferService);
+
+// test
+container.register(ACCOUNT_REPO, { useValue: new FakeRepo() });
+</script>
+<script type="text/plain" data-lang="ts" data-title="typescript · nestjs">
+@Injectable()
+export class TransferService {
+  constructor(@Inject(ACCOUNT_REPO) private readonly repo: AccountRepo) {}
+}
+
+@Module({
+  providers: [TransferService, { provide: ACCOUNT_REPO, useClass: SqlAccountRepo }],
+  controllers: [TransferController],
+})
+export class TransferModule {}
+
+// test
+Test.createTestingModule({ providers: [TransferService, { provide: ACCOUNT_REPO, useValue: fake }] });
+</script>
+<div class="note warn">tsyringe y Nest requieren en <code>tsconfig</code>: <code>"experimentalDecorators": true, "emitDecoratorMetadata": true</code>. Sin token, inyectar una <code>interface</code> falla porque en runtime no existe.</div>
+</div></details></section>
+
+<section class="card" id="orm"><details open><summary>Mismo modelo en 4 ORMs <span class="tag p0">P0</span></summary><div class="body">
+<script type="text/plain" data-lang="py" data-title="python · sqlmodel (sqlalchemy + pydantic)">
+class Account(SQLModel, table=True):
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    owner_id: UUID = Field(index=True)
+    balance_cents: int = Field(default=0)   # BIGINT
+    version: int = 0
+
+# lock pesimista
+acc = session.exec(select(Account).where(Account.id == aid).with_for_update()).one()
+</script>
+<script type="text/plain" data-lang="ts" data-title="sequelize (active record)">
+class Account extends Model<InferAttributes<Account>, InferCreationAttributes<Account>> {
+  declare id: CreationOptional<string>;
+  declare ownerId: string;
+  declare balanceCents: string; // BIGINT llega como string en pg → convertir a BigInt
+}
+Account.init({
+  id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+  ownerId: { type: DataTypes.UUID, allowNull: false },
+  balanceCents: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+}, { sequelize, tableName: 'accounts', underscored: true, version: true }); // version → optimistic lock
+
+await sequelize.transaction(async (t) => {
+  const acc = await Account.findByPk(id, { transaction: t, lock: t.LOCK.UPDATE });
+});
+</script>
+<script type="text/plain" data-lang="ts" data-title="typeorm (decoradores ≈ sqlmodel)">
+@Entity('accounts')
+export class Account {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Index() @Column('uuid') ownerId!: string;
+  @Column('bigint', { default: 0 }) balanceCents!: string;
+  @VersionColumn() version!: number;
+}
+
+await dataSource.transaction(async (m) => {
+  const acc = await m.getRepository(Account).findOne({
+    where: { id }, lock: { mode: 'pessimistic_write' },
+  });
+});
+</script>
+<script type="text/plain" data-lang="ts" data-title="prisma (schema-first)">
+// schema.prisma
+// model Account { id String @id @default(uuid()) ownerId String balanceCents BigInt @default(0) version Int @default(0) }
+
+await prisma.$transaction(async (tx) => {
+  // Prisma no tiene FOR UPDATE en su API → SQL crudo parametrizado
+  const [acc] = await tx.$queryRaw<Account[]>`SELECT * FROM "Account" WHERE id = ${id} FOR UPDATE`;
+  await tx.account.update({ where: { id }, data: { balanceCents: { decrement: 500n } } });
+});
+</script>
+<div class="note">Detalle completo de transacciones, locks y query plans en <a href="03-sql-orm.html">03 · SQL y ORM</a>.</div>
+</div></details></section>
+
+<section class="card" id="sintaxis"><details><summary>Sintaxis rápida Python → TS <span class="tag p0">P0</span></summary><div class="body">
+<table>
+<tr><th>Python</th><th>TypeScript</th></tr>
+<tr><td><code>x: int | None = None</code></td><td><code>let x: number | null = null</code></td></tr>
+<tr><td><code>Optional[str]</code> en params</td><td><code>name?: string</code> (puede ser <code>undefined</code>)</td></tr>
+<tr><td><code>dict[str, int]</code></td><td><code>Record&lt;string, number&gt;</code> / <code>Map&lt;string, number&gt;</code></td></tr>
+<tr><td><code>tuple[str, int]</code></td><td><code>[string, number]</code></td></tr>
+<tr><td><code>Literal["a","b"]</code></td><td><code>'a' | 'b'</code></td></tr>
+<tr><td><code>Protocol</code></td><td><code>interface</code> (tipado estructural)</td></tr>
+<tr><td><code>TypeVar T</code> / <code>def f[T](x: T)</code></td><td><code>function f&lt;T&gt;(x: T)</code></td></tr>
+<tr><td><code>[x*2 for x in xs if x&gt;0]</code></td><td><code>xs.filter(x =&gt; x &gt; 0).map(x =&gt; x * 2)</code></td></tr>
+<tr><td><code>a or b</code> / <code>a if a is not None else b</code></td><td><code>a || b</code> / <code>a ?? b</code></td></tr>
+<tr><td><code>getattr(o, "a", None)</code></td><td><code>o?.a</code></td></tr>
+<tr><td><code>f"{x}"</code></td><td><code>`${x}`</code></td></tr>
+<tr><td><code>try/except ValueError as e</code></td><td><code>try/catch (e: unknown)</code> + <code>if (e instanceof X)</code></td></tr>
+<tr><td><code>raise X("m")</code></td><td><code>throw new X('m')</code></td></tr>
+<tr><td><code>with open(...) as f</code></td><td><code>try/finally</code> o <code>await using</code> (TS 5.2+)</td></tr>
+<tr><td><code>asyncio.gather(*cs)</code></td><td><code>await Promise.all(ps)</code></td></tr>
+<tr><td><code>asyncio.wait_for(c, 5)</code></td><td><code>AbortSignal.timeout(5000)</code></td></tr>
+<tr><td><code>from .x import y</code></td><td><code>import { y } from './x.js'</code></td></tr>
+<tr><td><code>if __name__ == "__main__"</code></td><td><code>if (import.meta.url === `file://${process.argv[1]}`)</code> (raro)</td></tr>
+<tr><td><code>==</code></td><td><code>===</code> (nunca <code>==</code>)</td></tr>
+</table>
+</div></details></section>
+</main></div>
+</body>
+</html>

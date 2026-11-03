@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutList, Plus, BarChart3, ListChecks, LogOut, BookOpen } from 'lucide-react';
+import { LayoutList, Plus, BarChart3, ListChecks, LogOut, BookOpen, FileCode2 } from 'lucide-react';
 
 interface BottomNavProps {
     onSignOut: () => void;
@@ -61,6 +61,15 @@ export function BottomNav({ onSignOut, onAddClick }: BottomNavProps) {
             >
                 <BookOpen size={20} />
                 <span>Knowledge</span>
+            </NavLink>
+
+            <NavLink
+                to="/dashboard/cheatsheets"
+                className="flex flex-col lg:flex-row items-center gap-0.5 lg:gap-1.5 text-xs"
+                style={({ isActive }) => linkStyle(isActive)}
+            >
+                <FileCode2 size={20} />
+                <span>Cheats</span>
             </NavLink>
 
             <button
