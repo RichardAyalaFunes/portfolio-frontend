@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live Coding BelozFi</title>
+<link rel="stylesheet" href="assets/cheatsheet.css">
+<script src="assets/cheatsheet.js" defer></script>
+</head>
+<body>
+<header class="top"><a class="home" href="index.html">📚 Live Coding — BelozFi</a><span class="spacer"></span></header>
+<div style="max-width:1100px;margin:0 auto;padding:16px">
+  <h1>Cheat Sheets</h1>
+  <p class="lead">Código primero. Comentarios en español, identificadores en inglés. Prioridades = estimación de preparación, no información confirmada de la entrevista.</p>
+
+  <div class="note warn"><b>Pista del JD:</b> “You can read a slow query plan and fix it” → <a href="03-sql-orm.html#explain">EXPLAIN ANALYZE</a> es P0. Stack TS del JD: Node + Sequelize + tsyringe (DI) + zod. Equivalencias con Python en <a href="00-equivalencias.html">00</a>.</div>
+
+  <div class="index-grid">
+    <a href="00-equivalencias.html"><span class="tag p0">P0</span><b>00 · Python ↔ TypeScript</b><span class="d">Pydantic↔Zod, Depends↔tsyringe/Nest DI, SQLAlchemy/SQLModel↔Sequelize/TypeORM/Prisma, pytest↔Vitest</span></a>
+    <a href="01-typescript.html"><span class="tag p0">P0</span><b>01 · TypeScript avanzado</b><span class="d">Tipos, narrowing, generics, utility/mapped/conditional, async, Promise.*</span></a>
+    <a href="02-nodejs.html"><span class="tag p0">P0</span><b>02 · Node.js</b><span class="d">ESM vs CJS, imports y errores, event loop, streams, crypto, shutdown, npm</span></a>
+    <a href="03-sql-orm.html"><span class="tag p0">P0</span><b>03 · SQL, ORM y finanzas</b><span class="d">Query plans, índices, CTE, window, transacciones, locking, ledger, dinero</span></a>
+    <a href="04-nestjs.html"><span class="tag p1">P1</span><b>04 · NestJS</b><span class="d">Modules, DI, DTO, pipes, guards, interceptors, filters, testing</span></a>
+    <a href="05-nextjs-basico.html"><span class="tag p1">P1</span><b>05 · Next.js básico-intermedio</b><span class="d">App Router, Server/Client Components, Route Handlers, forms</span></a>
+    <a href="06-nextjs-avanzado.html"><span class="tag p2">P2</span><b>06 · Next.js avanzado</b><span class="d">Server Actions, caché, revalidación, auth, middleware, seguridad</span></a>
+    <a href="07-testing.html"><span class="tag p0">P0</span><b>07 · Testing</b><span class="d">Vitest/Jest/node:test, Supertest, mocks, concurrencia, invariantes</span></a>
+    <a href="08-seguridad.html"><span class="tag p0">P0</span><b>08 · Seguridad fintech</b><span class="d">OWASP, SQLi, JWT, RBAC, HMAC webhooks, rate limit, secretos</span></a>
+    <a href="09-resiliencia.html"><span class="tag p1">P1</span><b>09 · Resiliencia y eventos</b><span class="d">Retry+jitter, circuit breaker, outbox, BullMQ, SQS, DLQ</span></a>
+    <a href="10-observabilidad.html"><span class="tag p1">P1</span><b>10 · Observabilidad</b><span class="d">Pino, correlation IDs, OpenTelemetry, métricas, incidentes</span></a>
+    <a href="11-arquitectura.html"><span class="tag p2">P2</span><b>11 · Arquitectura</b><span class="d">SOLID, hexagonal, repository, strategy, adapter, antes/después</span></a>
+    <a href="13-clean-code.html"><span class="tag p0">P0</span><b>13 · Clean code y principios</b><span class="d">Naming, code smells, CQS, DRY/KISS/YAGNI, SOLID, ACID, DDD, hexagonal (carpetas)</span></a>
+    <a href="12-devops.html"><span class="tag p2">P2</span><b>12 · DevOps y ownership</b><span class="d">Docker, compose, CI, migraciones, git bisect, repos desconocidos</span></a>
+  </div>
+</div>
+</body>
+</html>

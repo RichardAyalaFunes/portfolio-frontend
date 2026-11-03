@@ -8,6 +8,7 @@ import { ApplicationDetail } from './ApplicationDetail';
 import { Metrics } from './Metrics';
 import { Rules } from './Rules';
 import { Knowledge } from './knowledge/Knowledge';
+import { Cheatsheets } from './cheatsheets/Cheatsheets';
 import { BottomNav } from './BottomNav';
 import { AddSheet } from './AddSheet';
 import '../../styles/dashboard.css';
@@ -90,6 +91,7 @@ export default function DashboardLayout() {
                         <Route path="/metrics" element={<Metrics />} />
                         <Route path="/rules" element={<Rules />} />
                         <Route path="/knowledge/*" element={<Knowledge />} />
+                        <Route path="/cheatsheets/*" element={<Cheatsheets />} />
                     </Routes>
                 </DashboardErrorBoundary>
             </div>

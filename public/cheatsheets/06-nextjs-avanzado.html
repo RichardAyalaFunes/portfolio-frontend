@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Next.js Avanzado</title>
+<link rel="stylesheet" href="assets/cheatsheet.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="assets/cheatsheet.js" defer></script>
+</head>
+<body>
+<header class="top"><a class="home" href="index.html">📚</a><span class="title">06 · Next.js básico-avanzado</span><span class="spacer"></span></header>
+<div class="layout"><nav class="toc"></nav><main>
+<h1>Next.js básico-avanzado</h1>
+<p class="lead">No repite <a href="05-nextjs-basico.html">05</a>. Server Actions, caché, auth, proxy/middleware, seguridad, arquitectura.</p>
+
+<section class="card" id="python"><details open><summary>🐍 Puente desde Python <span class="tag p0">P0</span></summary><div class="body">
+<table><tr><th>Python / FastAPI</th><th>TypeScript / Node</th><th>Nota</th></tr><tr><td><code>functools.lru_cache</code></td><td><code>unstable_cache</code> / <code>'use cache'</code></td><td>persistente entre requests</td></tr><tr><td>cache por request (<code>request.state</code>)</td><td><code>cache()</code> de React</td><td>dedupe dentro de una request</td></tr><tr><td>middleware de Starlette</td><td><code>proxy.ts</code> / <code>middleware.ts</code></td><td>chequeo optimista, no la única defensa</td></tr><tr><td><code>SessionMiddleware</code></td><td>cookie httpOnly + <code>cookies()</code></td><td></td></tr><tr><td>CSRF de un form Django</td><td>Server Actions verifican <code>Origin</code></td><td></td></tr></table>
+</div></details></section>
+
+<section class="card" id="versiones"><details open><summary>Diferencias de versión que muerden <span class="tag p2">P2</span></summary><div class="body">
+<table>
+<tr><th>Tema</th><th>Next 14</th><th>Next 15</th><th>Next 16</th></tr>
+<tr><td><code>fetch</code> cache por defecto</td><td><code>force-cache</code></td><td><code>no-store</code></td><td>opt-in con <code>'use cache'</code> (Cache Components)</td></tr>
+<tr><td><code>params</code>, <code>cookies()</code>, <code>headers()</code></td><td>síncronos</td><td>async (Promise)</td><td>async (sync eliminado)</td></tr>
+<tr><td>Middleware</td><td><code>middleware.ts</code></td><td><code>middleware.ts</code></td><td>renombrado a <code>proxy.ts</code> (runtime Node)</td></tr>
+<tr><td>React</td><td>18</td><td>19</td><td>19.x</td></tr>
+<tr><td>Bundler dev</td><td>webpack</td><td>Turbopack opcional</td><td>Turbopack por defecto</td></tr>
+<tr><td><code>useFormState</code></td><td>sí</td><td>→ <code>useActionState</code> (react)</td><td><code>useActionState</code></td></tr>
+</table>
+<div class="note">En la entrevista pregunta: “¿qué versión de Next es?” antes de opinar sobre caché o middleware.</div>
+</div></details></section>
+
+<section class="card" id="actions"><details open><summary>Server Actions <span class="tag p2">P2</span></summary><div class="body">
+<script type="text/plain" data-lang="ts" data-title="app/accounts/[id]/actions.ts">
+'use server';
+import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+
+const Schema = z.object({
+  toId: z.string().uuid(),
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  idempotencyKey: z.string().uuid(),
+});
+
+export type ActionState = { ok: boolean; error?: string; fieldErrors?: Record<string, string[]> };
+
+export async function transferAction(fromId: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: 'unauthorized' };              // 1. authn
+  const parsed = Schema.safeParse(Object.fromEntries(formData));         // 2. validar (es un endpoint público)
+  if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors };
+  const account = await getAccount(fromId);
+  if (account?.ownerId !== session.userId) return { ok: false, error: 'forbidden' }; // 3. authz por recurso
+  try {
+    await transfer({ fromId, toId: parsed.data.toId, amountCents: parseMxn(parsed.data.amount),
+                     idempotencyKey: parsed.data.idempotencyKey });
+  } catch (e) {
+    if (e instanceof InsufficientFundsError) return { ok: false, error: 'Saldo insuficiente' };
+    throw e;
+  }
+  revalidatePath(`/accounts/${fromId}`);                                 // 4. refrescar UI
+  return { ok: true };
+}
+</script>
+<script type="text/plain" data-lang="tsx" data-title="TransferForm.tsx (client)">
+'use client';
+import { useActionState, useState } from 'react';
+import { useFormStatus } from 'react-dom';
+import { transferAction, type ActionState } from './actions';
+
+export function TransferForm({ fromId }: { fromId: string }) {
+  const [state, formAction, pending] = useActionState(transferAction.bind(null, fromId), { ok: false } as ActionState);
+  const [key] = useState(() => crypto.randomUUID());       // misma key en reintentos del mismo submit
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="idempotencyKey" value={key} />
+      <input name="toId" /> <input name="amount" inputMode="decimal" />
+      <button disabled={pending}>{pending ? 'Enviando…' : 'Transferir'}</button>
+      {state.error && <p role="alert">{state.error}</p>}
+    </form>
+  );
+}
+</script>
+<div class="note danger">Una Server Action es un <b>POST público</b> con un ID. <code>bind(null, fromId)</code> NO es seguro: el cliente puede enviar otro <code>fromId</code>. Siempre re-autoriza dentro. Usa Actions para mutaciones; para lecturas, Server Components.</div>
+</div></details></section>
+
+<section class="card" id="cache"><details open><summary>Renderizado, caché y revalidación <span class="tag p2">P2</span></summary><div class="body">
+<table>
+<tr><th>Estrategia</th><th>Cómo</th><th>Fintech</th></tr>
+<tr><td>Estático (SSG)</td><td>sin datos dinámicos</td><td>landing, FAQ</td></tr>
+<tr><td>ISR</td><td><code>export const revalidate = 300</code> / <code>next: { revalidate }</code></td><td>tasas de referencia</td></tr>
+<tr><td>Dinámico (SSR)</td><td>usa <code>cookies()</code>, <code>headers()</code>, <code>no-store</code>, <code>export const dynamic = 'force-dynamic'</code></td><td><b>saldos, movimientos</b></td></tr>
+<tr><td>Client fetching</td><td>SWR / TanStack Query</td><td>polling de estado de pago</td></tr>
+</table>
+<script type="text/plain" data-lang="ts">
+fetch(url, { next: { tags: ['fx-rates'] } });   // etiquetar
+revalidateTag('fx-rates');                       // invalidar por tag (en action / route handler)
+revalidatePath('/accounts/[id]', 'page');        // invalidar ruta
+
+import { unstable_cache } from 'next/cache';     // cachear funciones no-fetch (DB) — Next 14/15
+const getRates = unstable_cache(async () => db.rate.findMany(), ['rates'], { revalidate: 60, tags: ['fx-rates'] });
+
+// Next 16 Cache Components
+async function getRates2() { 'use cache'; cacheLife('minutes'); cacheTag('fx-rates'); return db.rate.findMany(); }
+
+import { cache } from 'react';                   // dedupe dentro de UNA request (no persiste)
+export const getUser = cache(async (id: string) => db.user.findUnique({ where: { id } }));
+</script>
+<div class="note danger">Nunca caches datos por usuario en una caché compartida (saldo de A servido a B). Datos personales = dinámico o caché con la identidad en la key.</div>
+</div></details></section>
+
+<section class="card" id="auth"><details open><summary>Auth avanzada y protección de rutas <span class="tag p2">P2</span></summary><div class="body">
+<script type="text/plain" data-lang="ts" data-title="proxy.ts (16) / middleware.ts (≤15) — chequeo optimista">
+import { NextResponse, type NextRequest } from 'next/server';
+
+export function proxy(req: NextRequest) {              // en ≤15: export function middleware
+  const session = req.cookies.get('session')?.value;
+  if (!session && req.nextUrl.pathname.startsWith('/accounts')) {
+    return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(req.nextUrl.pathname)}`, req.url));
+  }
+  const res = NextResponse.next();
+  res.headers.set('x-request-id', req.headers.get('x-request-id') ?? crypto.randomUUID());
+  return res;
+}
+export const config = { matcher: ['/accounts/:path*', '/api/:path*'] };
+</script>
+<script type="text/plain" data-lang="ts" data-title="Data Access Layer: la verificación real">
+// lib/dal.ts
+import 'server-only';
+import { cache } from 'react';
+export const verifySession = cache(async () => {
+  const s = await getSession();
+  if (!s) redirect('/login');
+  return s;
+});
+export async function getAccountForUser(accountId: string) {
+  const s = await verifySession();
+  const acc = await db.account.findFirst({ where: { id: accountId, ownerId: s.userId } }); // authz en la query
+  if (!acc) notFound();
+  return toAccountDTO(acc);                                  // devuelve DTO, no el row completo
+}
+</script>
+<div class="note warn">El middleware/proxy <b>no</b> es la única defensa (CVE-2025-29927 permitió saltarlo con un header). Verifica sesión cerca de los datos: DAL, Route Handler y Server Action.</div>
+<table><tr><th>Sesión</th><th>Pro</th><th>Contra</th></tr>
+<tr><td>JWT en cookie (stateless)</td><td>sin DB por request</td><td>revocación difícil → expiración corta + refresh</td></tr>
+<tr><td>Session ID + tabla</td><td>revocable, auditable</td><td>lookup por request</td></tr></table>
+</div></details></section>
+
+<section class="card" id="seguridad"><details><summary>Seguridad en Next <span class="tag p2">P2</span></summary><div class="body">
+<ul>
+<li>Server Actions: Next compara <code>Origin</code> con <code>Host</code> (CSRF básico); configura <code>serverActions.allowedOrigins</code> tras proxies.</li>
+<li>No pases objetos de DB completos a Client Components: todo lo que cruza la frontera llega al navegador. Usa DTOs.</li>
+<li><code>import 'server-only'</code> en módulos con secretos/DB.</li>
+<li><code>taintObjectReference</code> / <code>taintUniqueValue</code> (React experimental) evitan filtrar objetos sensibles.</li>
+<li>Headers: CSP, <code>X-Frame-Options</code>, HSTS en <code>next.config</code> → <code>headers()</code>.</li>
+<li><code>dangerouslySetInnerHTML</code> con input del usuario = XSS. React escapa por defecto.</li>
+<li>Rate limiting en Route Handlers de login/pagos (Upstash, Redis, WAF).</li>
+</ul>
+<script type="text/plain" data-lang="js" data-title="next.config.mjs">
+export default {
+  async headers() {
+    return [{ source: '/(.*)', headers: [
+      { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'X-Frame-Options', value: 'DENY' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+    ] }];
+  },
+  serverExternalPackages: ['pg'],
+};
+</script>
+</div></details></section>
+
+<section class="card" id="arquitectura"><details><summary>Arquitectura e integración con backend <span class="tag p2">P2</span></summary><div class="body">
+<script type="text/plain" data-lang="sh">
+src/
+  app/                    # rutas: delgadas, sólo componen
+  components/             # UI reutilizable
+  lib/
+    dal.ts                # sesión + autorización + queries (server-only)
+    domain/               # reglas puras: money.ts, transfer.ts (testeables sin Next)
+    db.ts                 # cliente (pool / prisma)
+    schemas.ts            # zod compartido cliente/servidor
+</script>
+<table><tr><th>Opción</th><th>Cuándo</th></tr>
+<tr><td>Next como BFF delante de servicios (Node/Go/Python)</td><td>microservicios existentes; Next agrega/adapta y guarda secretos</td></tr>
+<tr><td>Next full-stack (DB directa)</td><td>MVP, equipo pequeño</td></tr>
+<tr><td>Route Handlers como API pública</td><td>móvil (React Native) consume la misma API</td></tr></table>
+<div class="note">Para el móvil de BelozFi (React Native), las Server Actions no sirven: necesitas Route Handlers/REST. Lógica de dominio fuera de <code>app/</code> para compartirla.</div>
+</div></details></section>
+
+<section class="card" id="testing-perf"><details><summary>Testing y rendimiento <span class="tag p2">P2</span></summary><div class="body">
+<script type="text/plain" data-lang="tsx">
+// Client Component → Vitest + RTL
+render(<TransferForm fromId="a" />);
+await userEvent.type(screen.getByRole('textbox', { name: /monto/i }), '100');
+
+// Route Handler → llamar la función exportada directamente
+const res = await POST(new NextRequest('http://x/api/transfers', { method: 'POST', body: JSON.stringify(body),
+  headers: { 'idempotency-key': 'k1' } }));
+expect(res.status).toBe(201);
+
+// Server Components async → probar la lógica en lib/ + E2E con Playwright
+await page.goto('/accounts/1'); await expect(page.getByText('Saldo')).toBeVisible();
+</script>
+<ul><li><code>next/image</code>, <code>next/font</code>, <code>next/dynamic</code> (lazy de componentes pesados).</li>
+<li>Evitar waterfalls: <code>Promise.all</code> + Suspense por sección.</li>
+<li><code>@next/bundle-analyzer</code> para ver qué client code pesa.</li></ul>
+</div></details></section>
+</main></div>
+</body>
+</html>
