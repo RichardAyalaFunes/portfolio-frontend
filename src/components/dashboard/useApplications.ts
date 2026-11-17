@@ -61,10 +61,15 @@ export function useApplications(refreshToken: number) {
         setApplications((prev) => prev && prev.map((a) => (a.id === updated.id ? updated : a)));
     }, []);
 
+    const add = useCallback((created: JobApplication) => {
+        editVersion.current += 1;
+        setApplications((prev) => prev && (prev.some((a) => a.id === created.id) ? prev : [created, ...prev]));
+    }, []);
+
     const remove = useCallback((id: string) => {
         editVersion.current += 1;
         setApplications((prev) => prev && prev.filter((a) => a.id !== id));
     }, []);
 
-    return { applications, error, reload: load, replace, remove };
+    return { applications, error, reload: load, replace, add, remove };
 }

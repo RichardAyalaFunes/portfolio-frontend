@@ -7,6 +7,8 @@ import { YcBadge } from './YcBadge';
 import { ContactList } from './ContactList';
 import { ReviewActions } from './ReviewActions';
 import { RoleFormSection } from './RoleFormSection';
+import { ReturnChip } from './ReturnChip';
+import { RoleHistory } from './RoleHistory';
 import { RoleTags } from './RoleTags';
 import { SkillMatch } from './SkillMatch';
 import type { QueueOutletContext } from './queueContext';
@@ -166,6 +168,15 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
         );
     }
 
+    /** One posting was merged into the wrong role: it becomes a role of its own, in the queue. */
+    async function handleSplit(postingId: string) {
+        const { original, created } = await dashboardApi.splitPosting(applicationId, postingId);
+        setApplication(original);
+        queue?.onApplicationChanged(original);
+        queue?.onApplicationAdded?.(created);
+        setSaveNote({ kind: 'ok', text: 'Split. The posting is now its own role in To review.' });
+    }
+
     async function handleDelete() {
         await dashboardApi.archiveApplication(applicationId);
         queue?.onApplicationRemoved(applicationId);
@@ -223,6 +234,7 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
 
                 <div className="flex items-center gap-2 mt-3 flex-wrap">
                     <BucketChip bucket={bucket} />
+                    <ReturnChip application={current} />
                     {isPostingDead(current) && bucket !== 'no_longer_open' && (
                         <span className="text-xs" style={{ color: 'var(--db-muted)' }}>
                             Posting closed
@@ -235,6 +247,8 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
                         </span>
                     )}
                 </div>
+
+                <RoleHistory application={current} onSplit={handleSplit} />
 
                 {current.tags?.length > 0 && (
                     <div className="mt-2">

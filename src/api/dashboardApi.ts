@@ -169,6 +169,38 @@ export interface SkillMatchData {
     rows?: SkillMatchRow[];
 }
 
+/** What the role was when it went away: the decision a comeback is measured against. */
+export interface ReturnPrior {
+    status: string;
+    /** 'you' when Richard set it (his review stamp exists), 'agent' when the search agent did. */
+    decided_by: 'you' | 'agent';
+    decided_on: string | null;
+    drop_reason: string | null;
+    drop_stage: string | null;
+    score: number | null;
+    application_stage: string | null;
+}
+
+/** One time a role we already held was posted again under a new posting id. */
+export interface ReturnEvent {
+    kind: 'reposted' | 'reopened';
+    /** The run date the new posting was found. */
+    at: string;
+    /** Days between the last sighting of the old posting and this one. */
+    gap_days: number;
+    previous_last_seen: string | null;
+    posting_id: string | null;
+    posting_url: string | null;
+    prior: ReturnPrior;
+    /** True when the comeback moved the role back to the review queue. */
+    status_reset: boolean;
+    status_after: string;
+    /** 'applied_before' when Richard had applied: the status is left alone and he is told. */
+    alert: string | null;
+    /** What differs in the new posting: field -> [old, new]. */
+    changes: Record<string, [unknown, unknown]>;
+}
+
 export interface JobApplication {
     id: string;
     legacy_id: string | null;
@@ -203,7 +235,9 @@ export interface JobApplication {
     /** Why it was cut (eligibility_geo, stack_paradigm, below_bar, ...). */
     drop_reason: string | null;
     notes: string;
-    postings: Array<{ id: string; url: string | null; source: string | null }>;
+    postings: Array<{ id: string; url: string | null; source: string | null; run_date?: string | null }>;
+    /** Server-side bookkeeping: `returns` (comebacks, see returnsModel.ts), `split_from`, `possible_duplicate_of`. */
+    extras?: { returns?: ReturnEvent[]; split_from?: string; possible_duplicate_of?: string } & Record<string, unknown>;
     contacts: RoleContact[];
     application_form: RoleApplicationForm | Record<string, never>;
     skill_match: SkillMatchData | Record<string, never>;
@@ -409,6 +443,11 @@ export const dashboardApi = {
         patch: { status?: string; stage?: string; notes?: string; jd_url?: string },
     ): Promise<JobApplication> {
         return request<JobApplication>('PATCH', `/applications/${id}`, patch);
+    },
+
+    /** Undo one wrong merge: the posting leaves the role and becomes a role of its own, back in the queue. */
+    async splitPosting(id: string, postingId: string): Promise<{ original: JobApplication; created: JobApplication }> {
+        return request('POST', `/applications/${id}/split`, { posting_id: postingId });
     },
 
     async archiveApplication(id: string): Promise<void> {

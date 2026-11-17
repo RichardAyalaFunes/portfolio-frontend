@@ -7,6 +7,8 @@ import type { JobApplication } from '../../api/dashboardApi';
 export interface QueueOutletContext {
     /** The detail screen saved a change: put the server's copy of the role into the list. */
     onApplicationChanged: (updated: JobApplication) => void;
+    /** A new role appeared (a posting was split off another): put it into the list. */
+    onApplicationAdded?: (created: JobApplication) => void;
     /** The role was archived: take it out of the list. */
     onApplicationRemoved: (id: string) => void;
 }

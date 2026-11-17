@@ -42,7 +42,7 @@ export function Queue({ refreshToken }: QueueProps) {
     const { applicationId } = useParams();
     const hasDetail = Boolean(applicationId);
 
-    const { applications, error, reload, replace, remove } = useApplications(refreshToken);
+    const { applications, error, reload, replace, add, remove } = useApplications(refreshToken);
     const [runs, setRuns] = useState<SearchRun[]>([]);
     const [search, setSearch] = useState('');
     const [prefs, setPrefs] = useState<QueuePrefs>(() => loadQueuePrefs());
@@ -166,8 +166,8 @@ export function Queue({ refreshToken }: QueueProps) {
         onlyBucket?.id === 'to_review' && !search.trim() && prefs.lanes.length === 0 && !prefs.source && !prefs.run;
 
     const outletContext: QueueOutletContext = useMemo(
-        () => ({ onApplicationChanged: replace, onApplicationRemoved: remove }),
-        [replace, remove],
+        () => ({ onApplicationChanged: replace, onApplicationAdded: add, onApplicationRemoved: remove }),
+        [replace, add, remove],
     );
 
     return (
