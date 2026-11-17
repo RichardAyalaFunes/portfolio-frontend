@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ExternalLink } from 'lucide-react';
 import type { JobApplication } from '../../api/dashboardApi';
 import { BucketChip } from './BucketChip';
+import { ReturnChip } from './ReturnChip';
 import { RoleTags } from './RoleTags';
 import { YcBadge } from './YcBadge';
 import { cardMeta } from './cardText';
@@ -101,6 +102,7 @@ export function ApplicationCard({ application, selected = false, showBucket = tr
 
             <div className="flex items-center gap-1.5 flex-wrap">
                 {showBucket && <BucketChip bucket={bucket} />}
+                <ReturnChip application={application} />
                 {verdict && (
                     <span className="text-[11px]" style={{ color: 'var(--db-muted)' }}>
                         {verdict}
