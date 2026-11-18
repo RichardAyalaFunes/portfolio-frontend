@@ -7,7 +7,7 @@ import { ReturnChip } from './ReturnChip';
 import { RoleTags } from './RoleTags';
 import { YcBadge } from './YcBadge';
 import { cardMeta } from './cardText';
-import { bandColorVar, freshnessColorVar, freshnessShort } from './dashboardTokens';
+import { bandColorVar, freshnessColorVar, freshnessHint, freshnessShortFor } from './dashboardTokens';
 import { bucketOf, dropReasonLabel, laneShort, statusLabel } from './queueBuckets';
 import { hasSkillMatch } from './skillMatchModel';
 
@@ -82,8 +82,12 @@ export function ApplicationCard({ application, selected = false, showBucket = tr
                     {cardMeta(application)}
                 </span>
                 <span className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs" style={{ color: freshnessColorVar(application.posted_date) }}>
-                        {freshnessShort(application.posted_date)}
+                    <span
+                        className="text-xs"
+                        style={{ color: freshnessColorVar(application.posted_date) }}
+                        title={freshnessHint(application.posted_date, application.posted_date_source)}
+                    >
+                        {freshnessShortFor(application.posted_date, application.posted_date_source)}
                     </span>
                     {application.jd_url && (
                         <a

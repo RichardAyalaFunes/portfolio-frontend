@@ -217,6 +217,7 @@ export interface JobApplication {
     employment_type: string | null;
     salary_text: string | null;
     posted_date: string | null;
+    posted_date_source?: string | null;
     posted_relative: string | null;
     eligibility_text: string | null;
     requirements_excerpt: string | null;

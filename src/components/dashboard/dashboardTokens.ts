@@ -48,6 +48,25 @@ export function freshnessShort(postedDate: string | null): string {
     return `${Math.floor(days / 30)}mo`;
 }
 
+/** True only when the date is the platform's own timestamp. Everything else (a relative
+ * phrase like "2 days ago", or the day we found the role) is an estimate. */
+export function isRealPostedDate(source: string | null | undefined): boolean {
+    return source === 'linkedin_listedAt';
+}
+
+/** Compact age, prefixed with "~" when the date is only an estimate. */
+export function freshnessShortFor(postedDate: string | null, source: string | null | undefined): string {
+    const short = freshnessShort(postedDate);
+    return postedDate && !isRealPostedDate(source) ? `~${short}` : short;
+}
+
+export function freshnessHint(postedDate: string | null, source: string | null | undefined): string {
+    if (!postedDate) return 'No posting date known';
+    return isRealPostedDate(source)
+        ? `Posted ${postedDate}`
+        : `Estimated ${postedDate}: the real posting date was not available`;
+}
+
 export function freshnessGroup(postedDate: string | null): string {
     const days = daysAgo(postedDate);
     if (days === null) return 'Undated';
