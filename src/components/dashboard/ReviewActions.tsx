@@ -2,7 +2,10 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Check, MessagesSquare, MoreHorizontal, Send, Trophy, X } from 'lucide-react';
 import { statusColorVar } from './dashboardTokens';
 import { statusLabel } from './queueBuckets';
-import { STAGES, STATUSES, nextStage, stagePatch, type ReviewPatch, type ReviewState } from './reviewModel';
+import { DUPLICATE_PATCH, STAGES, STATUSES, nextStage, stagePatch, type ReviewPatch, type ReviewState } from './reviewModel';
+
+/** The menu value for the Duplicate choice; it is a rejection with a reason, not a status of its own. */
+const DUPLICATE_OPTION = 'Duplicate';
 
 const STAGE_ICONS: Record<string, ReactNode> = {
     Applied: <Send size={16} />,
@@ -29,7 +32,7 @@ export function ReviewActions({ state, saving, onChange }: ReviewActionsProps) {
     return (
         <div className="flex gap-3">
             <div className="shrink-0 sm:flex-1 min-w-0 flex flex-col gap-1">
-                <Caption label="Decision" value={statusLabel(state.status)} />
+                <Caption label="Decision" value={state.duplicate ? "Rejected · duplicate" : statusLabel(state.status)} />
                 <div className="flex gap-1.5">
                     <VerdictButton
                         verdict="Rejected"
@@ -52,10 +55,15 @@ export function ReviewActions({ state, saving, onChange }: ReviewActionsProps) {
                     <OptionMenu
                         ariaLabel="More statuses"
                         heading="Set status"
-                        options={STATUSES.map((status) => ({ value: status, label: statusLabel(status), color: statusColorVar(status) }))}
-                        current={state.status}
+                        options={STATUSES.flatMap((status) => {
+                            const option = { value: status, label: statusLabel(status), color: statusColorVar(status) };
+                            return status === 'Rejected'
+                                ? [option, { value: DUPLICATE_OPTION, label: 'Duplicate', color: statusColorVar(status), hint: 'Rejected: it repeats another role' }]
+                                : [option];
+                        })}
+                        current={state.duplicate ? DUPLICATE_OPTION : state.status}
                         disabled={saving}
-                        onPick={(status) => onChange({ status })}
+                        onPick={(status) => onChange(status === DUPLICATE_OPTION ? DUPLICATE_PATCH : { status })}
                     />
                 </div>
             </div>

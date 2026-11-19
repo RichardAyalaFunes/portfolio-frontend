@@ -7,13 +7,14 @@ import { YcBadge } from './YcBadge';
 import { ContactList } from './ContactList';
 import { ReviewActions } from './ReviewActions';
 import { RoleFormSection } from './RoleFormSection';
+import { DuplicateChip } from './DuplicateChip';
 import { ReturnChip } from './ReturnChip';
 import { RoleHistory } from './RoleHistory';
 import { RoleTags } from './RoleTags';
 import { SkillMatch } from './SkillMatch';
 import type { QueueOutletContext } from './queueContext';
 import { BUCKET_BY_ID, STATUS_HELP, bucketOf, dropReasonLabel, isPostingDead, laneLabel } from './queueBuckets';
-import { undoPatch, type ReviewPatch } from './reviewModel';
+import { isDuplicate, savesNote, undoPatch, type ReviewPatch } from './reviewModel';
 import { hasSkillRows } from './skillMatchModel';
 
 const ENRICHMENT_SCORE_THRESHOLD = 80;
@@ -119,7 +120,7 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
         revert: () => void,
         { undoing = false }: { undoing?: boolean } = {},
     ) {
-        const before = { status: current.status, stage: current.application_stage };
+        const before = { status: current.status, stage: current.application_stage, duplicate: isDuplicate(current) };
         setSaving(true);
         setSaveNote(null);
         try {
@@ -133,7 +134,7 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
 
             const next = bucketOf(updated);
             const moved = next !== bucketOf(current);
-            const undo = undoing ? null : undoPatch(before, { status: updated.status, stage: updated.application_stage });
+            const undo = undoing ? null : undoPatch(before, { status: updated.status, stage: updated.application_stage, duplicate: isDuplicate(updated) });
             setSaveNote({
                 kind: 'ok',
                 text: undoing
@@ -185,7 +186,12 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
 
     const cutReason = dropReasonLabel(current.drop_reason);
     // Once he has applied, the stage says more than the verdict does ("You have an offer.").
-    const idleHelp = stage === 'Not applied' ? STATUS_HELP[status] : BUCKET_BY_ID[bucket].hint;
+    const duplicate = status === 'Rejected' && isDuplicate(current);
+    const idleHelp = duplicate
+        ? 'Rejected because it repeats another role. The search agent does not count it against the lines that found it.'
+        : stage === 'Not applied'
+          ? STATUS_HELP[status]
+          : BUCKET_BY_ID[bucket].hint;
 
     return (
         <div className="flex flex-col min-h-full">
@@ -234,6 +240,7 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
 
                 <div className="flex items-center gap-2 mt-3 flex-wrap">
                     <BucketChip bucket={bucket} />
+                    {duplicate && <DuplicateChip />}
                     <ReturnChip application={current} />
                     {isPostingDead(current) && bucket !== 'no_longer_open' && (
                         <span className="text-xs" style={{ color: 'var(--db-muted)' }}>
@@ -349,15 +356,19 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
                         id="role-notes"
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
+                        onKeyDown={(e) => {
+                            // Enter saves the note; Shift+Enter is a new line.
+                            if (!savesNote({ key: e.key, shiftKey: e.shiftKey, altKey: e.altKey, isComposing: e.nativeEvent.isComposing })) return;
+                            e.preventDefault();
+                            if (dirty && !saving) void handleSaveNotes();
+                        }}
                         rows={4}
                         className="w-full mt-2 p-3 rounded-xl text-sm resize-none"
                     />
                     <div className="flex items-center justify-end gap-3 mt-2">
-                        {dirty && (
-                            <span className="text-[11px]" style={{ color: 'var(--db-muted)' }}>
-                                Not saved yet. Reject, Approve or a stage change also saves it.
-                            </span>
-                        )}
+                        <span className="text-[11px]" style={{ color: 'var(--db-muted)' }}>
+                            {dirty ? 'Not saved yet. Press Enter to save. Reject, Approve or a stage change also saves it.' : 'Enter saves, Shift+Enter adds a line.'}
+                        </span>
                         <button
                             onClick={handleSaveNotes}
                             disabled={!dirty || saving}
@@ -374,7 +385,7 @@ function LoadedApplicationDetail({ applicationId }: { applicationId: string }) {
                 className="fixed bottom-20 lg:sticky lg:bottom-0 inset-x-0 lg:inset-x-auto z-10 px-4 py-3 flex flex-col gap-2"
                 style={{ background: 'var(--db-surface)', borderTop: '1px solid var(--db-border)' }}
             >
-                <ReviewActions state={{ status, stage }} saving={saving} onChange={(patch) => void handleReviewChange(patch)} />
+                <ReviewActions state={{ status, stage, duplicate }} saving={saving} onChange={(patch) => void handleReviewChange(patch)} />
                 <div className="flex items-center gap-3 min-h-[18px]">
                     <p
                         role="status"

@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { ExternalLink } from 'lucide-react';
 import type { JobApplication } from '../../api/dashboardApi';
 import { BucketChip } from './BucketChip';
+import { DuplicateChip } from './DuplicateChip';
 import { ReturnChip } from './ReturnChip';
 import { RoleTags } from './RoleTags';
 import { YcBadge } from './YcBadge';
 import { cardMeta } from './cardText';
 import { bandColorVar, freshnessColorVar, freshnessHint, freshnessShortFor } from './dashboardTokens';
 import { bucketOf, dropReasonLabel, laneShort, statusLabel } from './queueBuckets';
+import { isDuplicate } from './reviewModel';
 import { hasSkillMatch } from './skillMatchModel';
 
 interface ApplicationCardProps {
@@ -106,6 +108,7 @@ export function ApplicationCard({ application, selected = false, showBucket = tr
 
             <div className="flex items-center gap-1.5 flex-wrap">
                 {showBucket && <BucketChip bucket={bucket} />}
+                {isDuplicate(application) && <DuplicateChip />}
                 <ReturnChip application={application} />
                 {verdict && (
                     <span className="text-[11px]" style={{ color: 'var(--db-muted)' }}>

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { STAGES, STATUSES, nextStage, stagePatch, undoPatch } from '../../src/components/dashboard/reviewModel.ts';
+import { DUPLICATE_PATCH, STAGES, STATUSES, isDuplicate, nextStage, savesNote, stagePatch, undoPatch } from '../../src/components/dashboard/reviewModel.ts';
 
 describe('nextStage', () => {
     it('walks the application track one step at a time', () => {
@@ -64,5 +64,54 @@ describe('undoPatch', () => {
 
     it('offers no undo for a save that changed nothing', () => {
         assert.equal(undoPatch({ status: 'Approved', stage: 'Applied' }, { status: 'Approved', stage: 'Applied' }), null);
+    });
+});
+
+describe('savesNote', () => {
+    const key = (over: object) => ({ key: 'Enter', shiftKey: false, altKey: false, isComposing: false, ...over });
+
+    it('saves on a plain Enter', () => {
+        assert.equal(savesNote(key({})), true);
+    });
+
+    it('keeps Shift+Enter (and Alt+Enter) as a new line, and other keys as typing', () => {
+        assert.equal(savesNote(key({ shiftKey: true })), false);
+        assert.equal(savesNote(key({ altKey: true })), false);
+        assert.equal(savesNote(key({ key: 'a' })), false);
+    });
+
+    it('lets Enter confirm a word while an input method is composing', () => {
+        assert.equal(savesNote(key({ isComposing: true })), false);
+    });
+});
+
+describe('duplicate', () => {
+    it('the Duplicate action is a rejection with a reason', () => {
+        assert.deepEqual(DUPLICATE_PATCH, { status: 'Rejected', rejection_reason: 'duplicate' });
+    });
+
+    it('only a Rejected role with the reason is a duplicate', () => {
+        assert.equal(isDuplicate({ status: 'Rejected', extras: { rejection_reason: 'duplicate' } }), true);
+        assert.equal(isDuplicate({ status: 'Rejected', extras: {} }), false);
+        assert.equal(isDuplicate({ status: 'Rejected' }), false);
+        assert.equal(isDuplicate({ status: 'To validate', extras: { rejection_reason: 'duplicate' } }), false);
+    });
+
+    it('undoing a duplicate put on a waiting role puts back its status', () => {
+        const before = { status: 'To validate', stage: 'Not applied' };
+        const after = { status: 'Rejected', stage: 'Not applied', duplicate: true };
+        assert.deepEqual(undoPatch(before, after), { status: 'To validate' });
+    });
+
+    it('undoing a duplicate put on a plain rejection puts back a plain rejection', () => {
+        const before = { status: 'Rejected', stage: 'Not applied', duplicate: false };
+        const after = { status: 'Rejected', stage: 'Not applied', duplicate: true };
+        assert.deepEqual(undoPatch(before, after), { status: 'Rejected' });
+    });
+
+    it('undoing a move away from a duplicate rejects it as a duplicate again', () => {
+        const before = { status: 'Rejected', stage: 'Not applied', duplicate: true };
+        const after = { status: 'To validate', stage: 'Not applied', duplicate: false };
+        assert.deepEqual(undoPatch(before, after), { status: 'Rejected', rejection_reason: 'duplicate' });
     });
 });
