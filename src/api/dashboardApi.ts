@@ -238,7 +238,13 @@ export interface JobApplication {
     notes: string;
     postings: Array<{ id: string; url: string | null; source: string | null; run_date?: string | null }>;
     /** Server-side bookkeeping: `returns` (comebacks, see returnsModel.ts), `split_from`, `possible_duplicate_of`. */
-    extras?: { returns?: ReturnEvent[]; split_from?: string; possible_duplicate_of?: string } & Record<string, unknown>;
+    extras?: {
+        returns?: ReturnEvent[];
+        split_from?: string;
+        possible_duplicate_of?: string;
+        /** Why a Rejected role was rejected; 'duplicate' = it repeats another role. */
+        rejection_reason?: string;
+    } & Record<string, unknown>;
     contacts: RoleContact[];
     application_form: RoleApplicationForm | Record<string, never>;
     skill_match: SkillMatchData | Record<string, never>;
@@ -441,7 +447,7 @@ export const dashboardApi = {
 
     async updateApplication(
         id: string,
-        patch: { status?: string; stage?: string; notes?: string; jd_url?: string },
+        patch: { status?: string; stage?: string; notes?: string; jd_url?: string; rejection_reason?: string },
     ): Promise<JobApplication> {
         return request<JobApplication>('PATCH', `/applications/${id}`, patch);
     },
