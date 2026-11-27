@@ -13,6 +13,20 @@ export function bandColorVar(band: string | null): string {
     }
 }
 
+/**
+ * The score pill color, read from the number itself (the stored band can be missing or stale):
+ * 70 and under muted, 71-79 green, 80-87 yellow, 88 and up red. A YC company is always red:
+ * high priority, so it must catch the eye.
+ */
+export function scoreColorVar(score: number | null, source?: string | null): string {
+    if (source === 'ycombinator') return 'var(--db-band-drop)';
+    if (score === null) return 'var(--db-muted)';
+    if (score > 87) return 'var(--db-band-drop)';
+    if (score >= 80) return 'var(--db-band-excellent)';
+    if (score > 70) return 'var(--db-band-good)';
+    return 'var(--db-band-below)';
+}
+
 function daysAgo(dateStr: string | null): number | null {
     if (!dateStr) return null;
     const parsed = new Date(dateStr).getTime();

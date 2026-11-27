@@ -8,7 +8,7 @@ import { ReturnChip } from './ReturnChip';
 import { RoleTags } from './RoleTags';
 import { YcBadge } from './YcBadge';
 import { cardMeta } from './cardText';
-import { bandColorVar, freshnessColorVar, freshnessHint, freshnessShortFor } from './dashboardTokens';
+import { scoreColorVar, freshnessColorVar, freshnessHint, freshnessShortFor } from './dashboardTokens';
 import { bucketOf, dropReasonLabel, laneShort, statusLabel } from './queueBuckets';
 import { isDuplicate } from './reviewModel';
 import { hasSkillMatch } from './skillMatchModel';
@@ -69,8 +69,8 @@ export function ApplicationCard({ application, selected = false, showBucket = tr
                     <span
                         className="text-xs font-semibold shrink-0 mt-0.5 px-1.5 py-0.5 rounded-md tabular-nums"
                         style={{
-                            color: bandColorVar(application.band),
-                            background: `color-mix(in srgb, ${bandColorVar(application.band)} 14%, transparent)`,
+                            color: scoreColorVar(application.score, application.source),
+                            background: `color-mix(in srgb, ${scoreColorVar(application.score, application.source)} 14%, transparent)`,
                         }}
                         title={`Score ${application.score}`}
                     >
