@@ -398,6 +398,39 @@ export interface ListFilters {
     sort?: string;
 }
 
+// ── Search traceability (/dashboard/searches) ──
+
+export interface SearchCounts {
+    executions: number;
+    surfaced: number;
+    new: number;
+    read: number;
+    passed: number;
+    flagged: number;
+}
+
+export interface SearchRow extends SearchCounts {
+    line: string;
+    portal: string;
+    technique: string;
+    first_run: string;
+    last_run: string;
+    roles: number;
+    approved: number;
+    applied: number;
+    rejected: number;
+    pass_rate: number | null;
+    history: Array<{ run_date: string; surfaced: number; new: number; passed: number }>;
+}
+
+export interface SearchStatsResponse {
+    totals: SearchCounts & { searches: number; runs: number };
+    searches: SearchRow[];
+    by_technique: Record<string, SearchCounts>;
+    by_portal: Record<string, SearchCounts>;
+    timeline: Array<SearchCounts & { run_date: string; searches: number }>;
+}
+
 export const dashboardApi = {
     async login(password: string): Promise<{ token: string; expires_at: string }> {
         const result = await request<{ token: string; expires_at: string }>('POST', '/auth/login', {
@@ -478,6 +511,10 @@ export const dashboardApi = {
     async listRuns(): Promise<SearchRun[]> {
         const result = await request<{ runs: SearchRun[] }>('GET', '/runs');
         return result.runs;
+    },
+
+    async getSearchStats(since?: string): Promise<SearchStatsResponse> {
+        return request<SearchStatsResponse>('GET', `/search-stats${since ? `?since=${since}` : ''}`);
     },
 
     async getRules(): Promise<RulesResponse> {
